@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+        <script src="common.js"></script>
+        <script> 
+            var MAX_POINTS = 10;
+            var points=[], ctx, hull=[], triangles=[];
+            function Point(x, y, name) { var self = this;
+                this.x = x;
+                this.y = y;
+                this.name = name;
+                this.equal = function(point) {
+                    if(point.x == this.x && point.y == this.y) { return true; }
+                    else { return false; }
+                }
+                this.draw = function(color) {
+                    var size = 5
+                    if(color) {
+                        var originalColor = ctx.fillStyle;  //Save original color
+                        ctx.fillStyle = color;
+                        ctx.fillRect(self.x, self.y, size, size);
+                        ctx.fillStyle = originalColor;  //revert original color
+                    } else {
+                        ctx.fillRect(self.x, self.y, size, size);
+                    }
+                }
+            }
+            function Edge(p1,p2) { var self = this;
+                this.p1 = p1;
+                this.p2 = p2;
+                this.name = p1.name + " -> " + p2.name;
+                this.length = (function(){ return Math.sqrt(Math.pow(self.p2.x-self.p1.x,2)+Math.pow(self.p2.y-self.p1.y,2)); })();
+                this.draw = function(color) {
+                    function draw() {
+                        ctx.beginPath();
+                        ctx.moveTo(self.p1.x, self.p1.y);
+                        ctx.lineTo(self.p2.x, self.p2.y);
+                        ctx.closePath();
+                        ctx.stroke();
+                    }
+                    if(color) {
+                        var originalColor = ctx.strokeStyle;
+                        ctx.strokeStyle = color;
+                        draw();
+                        ctx.strokeStyle = originalColor;
+                    } else {
+                        draw();
+                    }
+                }
+            }
+            function Triangle(p1, p2, p3) { var self = this;
+                this.p1 = p1;
+                this.p2 = p2;
+                this.p3 = p3;
+                this.e1 = new Edge(p1, p2);
+                this.e2 = new Edge(p2, p3);
+                this.e3 = new Edge(p3, p1);
+                this.contains = function(point) {
+                    if(point.equal(p1) || point.equal(p2) || point.equal(p3)) { return true; }
+                    else { return false; }
+                }
+                this.draw = function(){ self.e1.draw(); self.e2.draw(); self.e3.draw(); }
+            }
+            var hullShell = { 
+                points: hull,
+                set: function(convexHull) { this.points = convexHull; },
+                draw: function() {
+                    for(var i=0; i<this.points.length; i++) {
+                        this.points[i].draw('red');
+                    }
+                },
+                drawEdges: function() {
+                    var p = this.points;
+                    if(p.length < 2) { return; }
+                    for(var i=0; i<p.length-1; i++) {
+                        var edge = new Edge(p[i], p[i+1]);
+                        edge.draw();
+                    }
+                    (new Edge(p[p.length-1], p[0])).draw();
+                }
+            };
+            function rand(n)  { return Math.floor((Math.random() * (n==undefined?10:n) + 1)); }            
+            function getPoints() {
+                var x=[], y=[];
+                for(var i=0; i<MAX_POINTS; i++) {
+                    x.push(rand(canvas.width));
+                    y.push(rand(canvas.height));
+                }
+                x.sort(function(a,b){return a-b;});
+                for(var i=0; i<x.length; i++) {
+                    var p = new Point(x[i], y[i]);
+                    points.push(p);
+                }
+            }
+            
+
+            
+            
+            
+            
+            
+
+
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            function getTestPoints3() {
+                p1 = new Point(46,42  , "p1");
+                p2 = new Point(68,217 , "p2");
+                p3 = new Point(127,227, "p3");
+                p4 = new Point(161,172, "p4");
+                p5 = new Point(185,329, "p5");
+                p6 = new Point(271,156, "p6");
+                p7 = new Point(353,104, "p7");
+                p8 = new Point(397,157, "p8");
+                p9 = new Point(422,97 , "p9");
+                p10 = new Point(538,242, "p10");
+                points = [p1,p2,p3,p4,p5,p6,p7,p8,p9,p10];
+                drawPoints('red');
+            }
+            function getTestPoints2() {
+                p1 = new Point(10,20,'p1');
+                p2 = new Point(150,150,'p2');
+                p3 = new Point(200,300,'p3');
+                p4 = new Point(200,400,'p4');
+                p5 = new Point(300,100,'p5');
+                //points = [p1,p2,p3,p4];
+                points = [p1,p2,p3,p4,p5];
+                drawPoints('red');
+            }
+            function getTestPoints1() {
+                p1 = new Point(100,200,'p1');
+                p2 = new Point(150,150,'p2');
+                p3 = new Point(160,290,'p3');
+                p4 = new Point(180,260,'p5');
+                p5 = new Point(190,100,'p4');
+                p6 = new Point(230,210,'p6');
+                p7 = new Point(280,270,'p7');
+                //points = [p1,p2,p3,p4,p5,p6,p7];
+                //points = [p1,p2,p3,p4];
+                points = [p1,p2, p4,p5,p6,p7];
+                drawPoints('red');
+            }
+            function RecordTestPoints() {
+                var arrayString = 'points = [';
+                for(var i=0; i<points.length; i++) {
+                    var p = points[i], name = 'p'+(i+1);
+                    console.log(name + ' = new Point('+ p.x + ',' + p.y + ', "' + name + '");');
+                    arrayString += name + ',';
+                }
+                arrayString += '];';
+                console.log(arrayString);
+                console.log("drawPoints('red');");
+            }
+            function test() {
+                var hull = getConvexHull(points);
+                var single = p3;
+                single.draw('SpringGreen');
+                
+                var bitangent = getBitangent(single, hull);
+                var triangle = new Triangle(bitangent[0], bitangent[1], single);
+                var pointsToTriangulate = [bitangent[0]];
+                
+                for(var i=0; i<hull.length; i++) {
+                    var point = hull[i];
+                    var piit = pointIsInsideTriangle(point, triangle);
+                    if(piit) { pointsToTriangulate.push(point); }
+                }
+
+                pointsToTriangulate.push(bitangent[1]);
+                for(var i=0; i<pointsToTriangulate.length-1; i++) {
+                    var p1 = pointsToTriangulate[i],
+                        p2 = pointsToTriangulate[i+1];
+                    var triangle = new Triangle(p1, p2, single);
+                    triangles.push(triangle);
+                }
+
+                for(var i=0; i<triangles.length; i++) { triangles[i].draw(); }
+                
+                hullShell.set(hull);
+                hullShell.draw();
+                hullShell.drawEdges();
+            }
+            function run() {
+                drawPoints('red');
+                triangulation(points);
+                for(var i=0; i<triangles.length; i++) { triangles[i].draw(); }
+            }
+            function clearCanvas() {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);    
+                ctx.fillStyle = "black";
+            }
+            function paint(algorithm) {
+                points.length = hull.length = 0;
+                ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "black";
+                getPoints();
+                //getTestPoints1();
+                //getTestPoints2();
+                //getTestPoints3();
+                //test();
+                run();
+            }
+            function drawPoints(color) { for(var i=0; i<points.length; i++) { points[i].draw(color); } }
+
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+
+            function getConvexHull(set) { //http://www.geeksforgeeks.org/convex-hull-set-1-jarviss-algorithm-or-wrapping/
+                var convexHull = [];
+                function orientation(p, q, r) {
+                    var val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);  // 0 --> p, q and r are colinear
+                    if (val == 0) { return 0; }  // colinear                          // 1 --> Clockwise
+                    return (val > 0)? 1: 2;      // clock or counterclock wise        // 2 --> Counterclockwise
+                }
+                var p = 0, q, n = set.length;
+                do {
+                    convexHull.push(set[p]);
+                    q = (p + 1) % n;
+                    for (var i=0; i<n; i++)  {
+                        var side = orientation(set[p], set[i], set[q]);
+                        if (side == 2) { q = i; }
+                    }
+                    p = q;
+                } while (p != 0);
+                return convexHull;
+            } //http://www.geeksforgeeks.org/convex-hull-set-1-jarviss-algorithm-or-wrapping/
+
+            function getSide(edge, point) { //right side is 1, left is -1, vector starts from edge.p1 to edge.p2
+                function determinant(vector1, vector2) { return (vector1.x * vector2.y) - (vector1.y * vector2.x); }
+                var origin = edge.p1; //Translate other points to have edge.p1 as the origin
+                var point1 = edge.p2;
+                var point2 = point;
+                var vector1 = new Point(point1.x - origin.x, point1.y - origin.y);
+                var vector2 = new Point(point2.x - origin.x, point2.y - origin.y);
+                var det = determinant(vector1, vector2);
+                return Math.sign(det);
+            }
+            
+            function getBitangent(subject, hull) {
+                var bitangent = [];
+                for(var i=0; i<hull.length; i++) {
+                    var prevPoint = hull[i];
+                    var corner    = hull[(i + 1) % hull.length];
+                    var nextPoint = hull[(i + 2) % hull.length];
+                    var prevWall  = new Edge(prevPoint, corner   );
+                    var nextWall  = new Edge(corner   , nextPoint);
+                    var prevSide  = getSide(prevWall, subject);
+                    var nextSide  = getSide(nextWall, subject);
+                    var isDiffSide = (prevSide != nextSide);
+                    if(isDiffSide) { bitangent.push(corner); }
+                }
+                //for(var i=0; i<hull.length; i++) { console.log(hull[i].name); }
+                //for(var i=0; i<bitangent.length; i++) { console.log('bitangent: '+bitangent[i].name); }
+                return bitangent;
+            }
+            
+            Array.prototype.allValuesSame = function() {
+                for(var i = 1; i < this.length; i++) {
+                    if(this[i] !== this[0]) { return false; }
+                }
+                return true;
+            }
+            
+            function pointIsInsideTriangle(point, triangle) { //This is my method, it doesn't work, see getTestPoints3(); It only doesn't work if the sort routine in triangulate() is included, which is necessary to resolve getTestPoints2(). This gives rise to the necessity of the visible faces algorithm
+                if(triangle.contains(point)) { return false; } //The reason it doesn't work is because the same bitangents can be the same for multiple iterations. In this case, getTestPoints3(), look at triangles[4].draw(), triangles[5].draw(), triangles[6].draw(). 4 and 5 are fine because the point inside the triangle is between the bitangents in sorted x order. However, for 6 the point inside triangle comes after the bitangents in x sorted order, so the enclosure triangle will be drawn first, which is wrong.
+                var sides = [getSide(triangle.e1, point), getSide(triangle.e2, point), getSide(triangle.e3, point)]; //You can't just add an condition in triangulate()'s triangles.push(triangle) because you can't leave out the bitangents in creating the triangles. The condition to see if the point is a triangle point is already there in the previous line.
+                if(sides.allValuesSame()) { return true; } //Therefore, you need the visible edges algorithm.
+                else { return false; }
+            }
+
+            function triangulate(single, hull) {
+                var bitangent = getBitangent(single, hull);
+                var enclosure = new Triangle(bitangent[0], bitangent[1], single);
+                var pointsToTriangulate = [bitangent[0]];
+                for(var i=0; i<hull.length; i++) {
+                    var point = hull[i];
+                    var piit = pointIsInsideTriangle(point, enclosure);
+                    if(piit) { pointsToTriangulate.push(point); }
+                }
+                pointsToTriangulate.push(bitangent[1]); //*
+                pointsToTriangulate.sort(function(a,b) { //Multi-criteria sort is required if x is the same for two points
+                    if(a.x == b.x) { return a.y - b.y; } //getTestPoints2() marks the points that show the flaw without this sort step
+                    else { return a.x - b.x; }
+                }); //*/
+                for(var i=0; i<pointsToTriangulate.length-1; i++) {
+                    var p1 = pointsToTriangulate[i],
+                        p2 = pointsToTriangulate[i+1];
+                    var triangle = new Triangle(p1, p2, single);
+                    triangles.push(triangle);
+                }
+            }
+
+            function triangulation(set) {
+                if(set.length < 4) { return false; }
+                var tempHull = [ set[0], set[1], set[2] ];
+                var firstTriangle = new Triangle(set[0], set[1], set[2]);
+                triangles.push(firstTriangle);
+                //triangulate(set[3], tempHull); /*
+                for(var i=3; i<set.length; i++) {
+                    var subject = set[i];
+                    triangulate(subject, tempHull);
+                    tempHull.push(subject);
+                    tempHull = getConvexHull(tempHull);
+                } //*/
+            }
+        </script>
+    </head>
+
+    <body bgcolor="#000000">
+        <h1 style="text-align:center;color:white;">Triangulation 7</h1>
+        <div style="width:100%;">
+            <canvas id="silhouette" width="800px" height="450px" style="display:block;margin: 0 auto;"></canvas>
+            <div style="color:white;margin:50px auto 0 auto;width:800px;">
+                <ul>
+                    <li>Putting the visible faces algorithm and experimenting with my own method</li>
+                    <li>Find the bitangents and create a triangle with the new point. Any points inside this triangle needs to be triangulated. This is my method.</li>
+                    <li>The convex hull cannot contain colinear points, made clear by <a href='https://www.youtube.com/watch?v=0HZaRu5IupM'>this</a> video. The convex hull algorithm chosen does not include colinear points. This is important for the bitangent algorithm.</li>
+                    <li>getTestPoints3() shows clearly that you need the visible faces algorithm to have this work correctly. To see it, print out each triangle one at a time by using triangles[0].draw();</li>
+                </ul>
+            </div>
+        </div>
+        <div style="text-align: center; margin-top:50px;"><button id='next' onclick="gotoNextPage();">Next</button></div>
+
+        <script>
+            var canvas = document.getElementById('silhouette');
+            paint();
+        </script>
+    </body>
+<html>

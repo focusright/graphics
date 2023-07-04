@@ -1,0 +1,141 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<script type="text/javascript">
+
+var fierceAudio = new Audio("Fierce.wav");
+var strongAudio = new Audio("Strong.wav");
+
+var idle = [];
+idle[0] = new rect(3,   10, 65, 95);
+idle[1] = new rect(91,  10, 65, 95);
+idle[2] = new rect(180, 10, 65, 95);
+idle[3] = new rect(273, 10, 65, 95);
+idle[4] = new rect(361, 10, 65, 95);
+
+var punch = [];
+punch[0] = new rect(250, 268, 65,  95);
+punch[1] = new rect(330, 268, 80,  95);
+punch[2] = new rect(430, 268, 112, 95);
+punch[3] = new rect(330, 268, 80,  95);
+punch[4] = new rect(250, 268, 65,  95);
+
+var walkforward = [];
+walkforward[0] = new rect(535, 125, 75, 97);
+walkforward[1] = new rect(621, 125, 75, 97);
+walkforward[2] = new rect(706, 125, 75, 97);
+walkforward[3] = new rect(792, 125, 75, 97);
+walkforward[4] = new rect(877, 125, 75, 97);
+walkforward[5] = new rect(966, 125, 75, 97);
+
+var walkbackward = [];
+walkbackward[0] = new rect(0,   125, 75, 97);
+walkbackward[1] = new rect(76,  125, 75, 97);
+walkbackward[2] = new rect(160, 125, 75, 97);
+walkbackward[3] = new rect(250, 125, 75, 97);
+walkbackward[4] = new rect(340, 125, 75, 97);
+walkbackward[5] = new rect(420, 125, 75, 97);
+
+function rect(x,y,w,h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+}
+
+function animate(frames){
+	spritesheet = new Image();
+    spritesheet.src = "RyuCE_Transparent.png";
+    canvas = document.getElementById('mycanvas');
+    ctx = canvas.getContext('2d');
+
+    if (frames == idle) {
+        drawIdle(idle);
+    } else if (frames == punch) {
+        drawPunch(punch);
+    } else if (frames == walkforward) {
+
+    } else if (frames == walkbackward) {
+
+    }
+} 
+
+var curindex = 0;
+
+var idlehandle = 0;
+function drawIdle(frames){
+    clearInterval(idlehandle);
+    idlehandle = setInterval(function() { 
+        ctx.fillStyle = "DarkGreen";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        curindex = curindex % frames.length;
+        var frame = frames[curindex];
+        ctx.drawImage(spritesheet, frame.x, frame.y, frame.w, frame.h, 100, 100, 180, 250);
+        curindex++;
+        
+        document.getElementById('data').innerHTML = curindex;
+    }, 100);
+    
+    
+}
+var punchhandle = 0;
+function drawPunch(frames) {
+    clearInterval(idlehandle);
+    curindex = 0;
+    var frame = null;
+    punchhandle = setInterval(function() {
+        if(curindex < frames.length) {
+            ctx.fillStyle = "DarkGreen";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            frame = frames[curindex];
+            ctx.drawImage(spritesheet, frame.x, frame.y, frame.w, frame.h, 100, 100, 180, 250);
+            curindex++;
+            
+            document.getElementById('data').innerHTML = curindex;
+        } else {
+            clearInterval(punchhandle);
+            drawIdle(idle);
+        }
+    }, 100);
+}
+
+document.onkeydown = 
+    function(e) {
+        var keynum;
+        if(window.event) {            // IE
+            keynum = window.event.keyCode
+        }
+        else if(e.which) {            // Netscape/Firefox/Opera
+            keynum = e.which
+        }
+
+        if (keynum == 80) {             //p
+            Punch();
+        } else if (keynum == 37) {      //left
+            walkleft();
+        } else if (keynum == 39) {      //right
+            walkright();
+        }
+    }
+    
+function Punch() {
+    fierceAudio.play();
+    animate(punch);
+}
+
+function walkleft() {
+
+}
+
+function walkright() {
+
+}
+
+</script>
+</head>
+<body onload="animate(idle);">
+  <canvas id="mycanvas" width="400" height="400"></canvas>
+  <div id="data"></div>
+</body>
+</html>

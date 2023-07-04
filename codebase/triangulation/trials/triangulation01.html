@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+        <script src="common.js"></script>
+        <script>
+            var MAX_POINTS = 100;
+
+            function rand(n)  { return Math.floor((Math.random() * (n==undefined?10:n) + 1)); }
+            function getPoints() {
+                var x=[], y=[];
+                for(var i=0; i<MAX_POINTS; i++) {
+                    x.push(rand(canvas.width));
+                    y.push(rand(canvas.height));
+                }
+                //x.sort();  //Use this to get cool but unintended pattern
+                x.sort(function(a,b){return a-b;}); //javascript sort() if compare function is missing then all are convert to strings and compared
+                var points = [];
+                for(var i=0; i<x.length; i++) { points.push([x[i], y[i]]);}
+                return points;
+            }
+            function drawPoints(ctx, points) { 
+                for(var i=0; i<points.length; i++) { 
+                    ctx.fillRect(points[i][0], points[i][1], 1, 1); 
+                }
+            }
+            function testTriangle(ctx) {
+                ctx.beginPath();
+                ctx.moveTo(75,50);
+                ctx.lineTo(100,75);
+                ctx.lineTo(100,25);
+                ctx.closePath();
+                ctx.stroke();
+            }
+           
+            function drawTriangles(ctx, points) { //For every point see previous two points and make triangle
+                for(var i=2; i<points.length; i++) { 
+                    var p1 = points[i-2];
+                    var p2 = points[i-1];
+                    var p3 = points[i];
+                    ctx.beginPath();
+                    ctx.moveTo(p1[0],p1[1]);
+                    ctx.lineTo(p2[0],p2[1]);
+                    ctx.lineTo(p3[0],p3[1]);
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+            }
+            function paint(canvas) {
+                ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#000000";
+                var points = getPoints();
+                //drawPoints(ctx, points);
+                //testTriangle(ctx);
+                drawTriangles(ctx, points);
+            }
+        </script>
+    </head>
+
+    <body bgcolor="#000000">
+        <h1 style="text-align:center;color:white;">Triangulation 1</h1>
+        <div style="width:100%;">
+            <canvas id="silhouette" width="800px" height="450px" style="display:block;margin: 0 auto;"></canvas>
+            <div style="color:white;margin:50px auto 0 auto;width:800px;">Triangulate down the sorted points, taking 3 points at a time</div>
+        </div>
+        <div style="text-align: center; margin-top:50px;"><button id='next' onclick="gotoNextPage();">Next</button></div>
+
+        <script>
+            var canvas = document.getElementById('silhouette');
+            paint(canvas);
+        </script>
+    </body>
+<html>

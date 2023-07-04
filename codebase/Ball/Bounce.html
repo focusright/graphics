@@ -1,0 +1,69 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<script type="text/javascript">
+
+function rectangle(x,y,w,h) {
+    this.x = x;
+    this.y = y;
+    this.width = w;
+    this.height = h;
+    this.xspeed = 3;
+    this.yspeed = 4;
+    this.sound = new Audio("Bounce.mp3");
+    
+    this.advance = function() {
+        this.x += this.xspeed;
+        this.y += this.yspeed;
+        this.top = this.y;
+        this.bottom = this.y + this.height;
+        this.left = this.x;
+        this.right = this.x + this.width
+    }
+    
+    this.flipX = function() {
+        this.xspeed = -this.xspeed;
+        (new Audio("Bounce.mp3")).play();
+    }
+    
+    this.flipY = function() {
+        this.yspeed = -this.yspeed;
+        (new Audio("Bounce.mp3")).play();
+    }
+}
+
+rect = new rectangle(20, 20, 65, 60);
+
+function animate(){
+	spritesheet = new Image();
+	spritesheet.src = "ball.gif";
+    canvas = document.getElementById('mycanvas');
+    ctx = canvas.getContext('2d');
+    setInterval(drawShape, 10);
+} 
+
+function drawShape(){
+    ctx.fillStyle = "LightSkyBlue";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = "black";
+    ctx.drawImage(spritesheet, 0, 0, 226, 223, rect.x, rect.y, rect.width, rect.height);
+    
+    if(rect.left < 0 || rect.right > canvas.width)
+        rect.flipX();
+    if(rect.top < 0 || rect.bottom > canvas.height)
+        rect.flipY();
+
+    rect.advance();
+
+    document.getElementById('data').innerHTML = rect.bottom;
+
+}
+</script>
+</head>
+<body onload="animate();">
+  <canvas id="mycanvas" width="400" height="400"></canvas>
+  <div id="data"></div>
+</body>
+</html>
+

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+        <script src="common.js"></script>
+        <script> 
+            var MAX_POINTS = 10;
+            var points=[], ctx, hull=[], triangles=[];
+            function Point(x, y, name) { var self = this;
+                this.x = x;
+                this.y = y;
+                this.name = name;
+                this.equal = function(point) {
+                    if(point.x == this.x && point.y == this.y) { return true; }
+                    else { return false; }
+                }
+                this.draw = function(color) {
+                    var size = 5
+                    if(color) {
+                        var originalColor = ctx.fillStyle;  //Save original color
+                        ctx.fillStyle = color;
+                        ctx.fillRect(self.x, self.y, size, size);
+                        ctx.fillStyle = originalColor;  //revert original color
+                    } else {
+                        ctx.fillRect(self.x, self.y, size, size);
+                    }
+                }
+            }
+            function Edge(p1,p2) { var self = this;
+                this.p1 = p1;
+                this.p2 = p2;
+                this.name = p1.name + " -> " + p2.name;
+                this.length = (function(){ return Math.sqrt(Math.pow(self.p2.x-self.p1.x,2)+Math.pow(self.p2.y-self.p1.y,2)); })();
+                this.draw = function(color) {
+                    function draw() {
+                        ctx.beginPath();
+                        ctx.moveTo(self.p1.x, self.p1.y);
+                        ctx.lineTo(self.p2.x, self.p2.y);
+                        ctx.closePath();
+                        ctx.stroke();
+                    }
+                    if(color) {
+                        var originalColor = ctx.strokeStyle;
+                        ctx.strokeStyle = color;
+                        draw();
+                        ctx.strokeStyle = originalColor;
+                    } else {
+                        draw();
+                    }
+                }
+            }
+            function Triangle(p1, p2, p3) { var self = this;
+                this.p1 = p1;
+                this.p2 = p2;
+                this.p3 = p3;
+                this.e1 = new Edge(p1, p2);
+                this.e2 = new Edge(p2, p3);
+                this.e3 = new Edge(p3, p1);
+                this.contains = function(point) {
+                    if(point.equal(p1) || point.equal(p2) || point.equal(p3)) { return true; }
+                    else { return false; }
+                }
+                this.draw = function(){ self.e1.draw(); self.e2.draw(); self.e3.draw(); }
+            }
+            var hullShell = { 
+                points: [],
+                edges: [],
+                set: function(convexHull) { 
+                    this.points = convexHull;
+                    this.edges.length = 0;
+                },
+                draw: function() {
+                    for(var i=0; i<this.points.length; i++) {
+                        this.points[i].draw('red');
+                    }
+                },
+                drawEdges: function() {
+                    var e = this.getEdges();
+                    for(var i=0; i<e.length; i++) { e[i].draw(); }
+                },
+                getEdges: function() {
+                    var p = this.points, edges=this.edges;
+                    if(p.length < 2) { return null; }
+                    if(edges.length == p.length) { return edges; } //For every convex polygon the number of points equal the number of edges. If edges are already there we don't want to call this function again, otherwise it re-inputs the edges again and foobars everything
+                    for(var i=0; i<p.length-1; i++) {
+                        var edge = new Edge(p[i], p[i+1]);
+                        edges.push(edge);
+                    }
+                    var last = new Edge(p[p.length-1], p[0]);
+                    edges.push(last);
+                    return edges;
+                }
+            };
+            function rand(n)  { return Math.floor((Math.random() * (n==undefined?10:n) + 1)); }            
+            function getPoints() {
+                var x=[], y=[];
+                for(var i=0; i<MAX_POINTS; i++) {
+                    x.push(rand(canvas.width));
+                    y.push(rand(canvas.height));
+                }
+                x.sort(function(a,b){return a-b;});
+                for(var i=0; i<x.length; i++) {
+                    var p = new Point(x[i], y[i]);
+                    points.push(p);
+                }
+            }
+            
+
+            
+            
+            
+            
+            
+
+
+            
+            
+            
+            
+            
+            
+            function getTestPoints7() {
+                p1 = new Point(52,266 , "p1");
+                p2 = new Point(156,333, "p2");
+                p3 = new Point(162,37 , "p3");
+                p4 = new Point(178,89 , "p4");
+                p5 = new Point(186,247, "p5");
+                p6 = new Point(449,397, "p6");
+                p7 = new Point(497,356, "p7");
+                p8 = new Point(570,360, "p8");
+                p9 = new Point(594,371, "p9");
+                p10 = new Point(599,312, "p10");
+                //points = [p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,];
+                points = [p1,p2,p3,p4,p5,p6];
+                drawPoints('red');
+            }
+            function getTestPoints6() {
+                p1 = new Point(19,32, "p1");
+                p2 = new Point(63,442, "p2");
+                p3 = new Point(109,128, "p3");
+                p4 = new Point(461,232, "p4");
+                p5 = new Point(525,279, "p5");
+                p6 = new Point(585,136, "p6");
+                p7 = new Point(617,97, "p7");
+                p8 = new Point(632,27, "p8");
+                p9 = new Point(664,259, "p9");
+                p10 = new Point(769,175, "p10");
+                //points = [p1,p2,p3,p4,p5,p6,p7,p8,p9,p10];
+                points = [p1,p2,p3,p4,p5,p6,p7];
+                //points = [p1,p2,p3,p4,p5,p6];
+                drawPoints('red');
+            }
+            function getTestPoints5() {
+                p1 = new Point(23,425, "p1");
+                p2 = new Point(100,262, "p2");
+                p3 = new Point(140,334, "p3");
+                p4 = new Point(163,288, "p4");
+                p5 = new Point(313,379, "p5");
+                p6 = new Point(353,197, "p6");
+                p7 = new Point(356,83, "p7");
+                p8 = new Point(364,31, "p8");
+                p9 = new Point(402,187, "p9");
+                p10 = new Point(706,104, "p10");
+                //points = [p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,];
+                points = [p1,p2,p3,p4,p5];
+                drawPoints('red');
+            }
+            function getTestPoints4() {
+                p1 = new Point(25,253, "p1");
+                p2 = new Point(125,278, "p2");
+                p3 = new Point(157,369, "p3");
+                p4 = new Point(461,40, "p4");
+                p5 = new Point(463,288, "p5");
+                p6 = new Point(484,12, "p6");
+                p7 = new Point(577,240, "p7");
+                p8 = new Point(597,23, "p8");
+                p9 = new Point(641,426, "p9");
+                p10 = new Point(692,53, "p10");
+                //points = [p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,];
+                //points = [p1,p2,p3,p4,p5,p6];
+                points = [p1,p2,p3,p4,p5];
+                drawPoints('red');
+            }
+            function getTestPoints3() {
+                p1 = new Point(46,42  , "p1");
+                p2 = new Point(68,217 , "p2");
+                p3 = new Point(127,227, "p3");
+                p4 = new Point(161,172, "p4");
+                p5 = new Point(185,329, "p5");
+                p6 = new Point(271,156, "p6");
+                p7 = new Point(353,104, "p7");
+                p8 = new Point(397,157, "p8");
+                p9 = new Point(422,97 , "p9");
+                p10 = new Point(538,242, "p10");
+                points = [p1,p2,p3,p4,p5,p6,p7,p8,p9,p10];
+                drawPoints('red');
+            }
+            function getTestPoints2() {
+                p1 = new Point(10,20,'p1');
+                p2 = new Point(150,150,'p2');
+                p3 = new Point(200,300,'p3');
+                p4 = new Point(200,400,'p4');
+                p5 = new Point(300,100,'p5');
+                //points = [p1,p2,p3,p4];
+                points = [p1,p2,p3,p4,p5];
+                drawPoints('red');
+            }
+            function getTestPoints1() {
+                p1 = new Point(100,200,'p1');
+                p2 = new Point(150,150,'p2');
+                p3 = new Point(160,290,'p3');
+                p4 = new Point(180,260,'p5');
+                p5 = new Point(190,100,'p4');
+                p6 = new Point(230,210,'p6');
+                p7 = new Point(280,270,'p7');
+                //points = [p1,p2,p3,p4,p5,p6,p7];
+                //points = [p1,p2,p3,p4];
+                points = [p1,p2, p4,p5,p6,p7];
+                drawPoints('red');
+            }
+            function test() {
+                //getTestPoints4();
+                getTestPoints5();
+                drawPoints('red');
+                var visible = getVisibleEdgePoints(p5, [p1,p4,p3]);
+                console.log(visible);
+            }
+            function run() {
+                getPoints();
+                //getTestPoints1();
+                //getTestPoints2();
+                //getTestPoints3();
+                //getTestPoints4();
+                //getTestPoints5();
+                //getTestPoints6();
+                //getTestPoints7();
+                drawPoints('red');
+                triangulation(points);
+                for(var i=0; i<triangles.length; i++) { triangles[i].draw(); }
+            }
+            function paint(algorithm) {
+                setup();
+                clearEverything();
+                run();
+                //test();
+            }
+            
+            
+            
+            
+            
+            function setup() {
+                ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "black";
+            }
+            function drawPoints(color) { for(var i=0; i<points.length; i++) { points[i].draw(color); } }
+            function RecordTestPoints() {
+                var arrayString = 'points = [';
+                for(var i=0; i<points.length; i++) {
+                    var p = points[i], name = 'p'+(i+1);
+                    console.log(name + ' = new Point('+ p.x + ',' + p.y + ', "' + name + '");');
+                    arrayString += name + ',';
+                }
+                arrayString += '];';
+                console.log(arrayString);
+                console.log("drawPoints('red');");
+            }
+            function clearCanvas() {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);    
+                ctx.fillStyle = "black";
+            }
+            function recordTestPoints() {
+                var arrayString = 'points = [';
+                for(var i=0; i<points.length; i++) {
+                    var p = points[i], name = 'p'+(i+1);
+                    console.log(name + ' = new Point('+ p.x + ',' + p.y + ', "' + name + '");');
+                    arrayString += name + ',';
+                }
+                arrayString += '];';
+                console.log(arrayString);
+                console.log("drawPoints('red');");
+            }
+            function clearEverything() {
+                triangles.length = points.length = hullShell.points.length = hullShell.edges.length = 0;
+                clearCanvas();
+            }
+            function animate() {
+                var i = 0;
+                function loop() {
+                    setTimeout(function(){
+                        //console.log(i);
+                        triangles[i].draw();
+                        i++;
+                        if(i<triangles.length) { loop(); }
+                    }, 1000);
+                }
+                clearCanvas();
+                drawPoints('red');
+                loop();
+            }
+            
+
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            function doIntersect(p1, q1, p2, q2) { //http://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
+                function onSegment(p, q, r) { // Given three colinear points p, q, r, the function checks if point q lies on line segment 'pr'
+                    var max = Math.max, min = Math.min;
+                    if (q.x <= max(p.x, r.x) && q.x >= min(p.x, r.x) && q.y <= max(p.y, r.y) && q.y >= min(p.y, r.y)) {
+                       return true;
+                    }
+                    return false;
+                }
+                function orientation(p, q, r) {
+                    var val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+                    if (val == 0) { return 0; }
+                    return (val > 0)? 1: 2;
+                }
+                if(p1.equal(p2) || p1.equal(q2) || q1.equal(p2) || q1.equal(q2)) { return false; }
+                var o1 = orientation(p1, q1, p2);
+                var o2 = orientation(p1, q1, q2);
+                var o3 = orientation(p2, q2, p1);
+                var o4 = orientation(p2, q2, q1);
+                if (o1 != o2 && o3 != o4) { return true; }
+                return false;
+            } //http://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
+            function getConvexHull(set, clockwise) { //http://www.geeksforgeeks.org/convex-hull-set-1-jarviss-algorithm-or-wrapping/
+                var convexHull = [];
+                function orientation(p, q, r) {
+                    var val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);  // 0 --> p, q and r are colinear
+                    if (val == 0) { return 0; }  // colinear                          // 1 --> Clockwise
+                    return (val > 0)? 1: 2;      // clock or counterclock wise        // 2 --> Counterclockwise
+                }
+                var p = 0, q, n = set.length;
+                do {
+                    convexHull.push(set[p]);
+                    q = (p + 1) % n;
+                    for (var i=0; i<n; i++)  {
+                        var side = orientation(set[p], set[i], set[q]);
+                        var preferred = clockwise == true ? 1 : 2;
+                        if (side == preferred) { q = i; }
+                    }
+                    p = q;
+                } while (p != 0);
+                return convexHull;
+            } //http://www.geeksforgeeks.org/convex-hull-set-1-jarviss-algorithm-or-wrapping/
+
+            function getSide(edge, point) { //right side is 1, left is -1, vector starts from edge.p1 to edge.p2
+                function determinant(vector1, vector2) { return (vector1.x * vector2.y) - (vector1.y * vector2.x); }
+                var origin = edge.p1; //Translate other points to have edge.p1 as the origin
+                var point1 = edge.p2;
+                var point2 = point;
+                var vector1 = new Point(point1.x - origin.x, point1.y - origin.y);
+                var vector2 = new Point(point2.x - origin.x, point2.y - origin.y);
+                var det = determinant(vector1, vector2);
+                return Math.sign(det);
+            }
+
+            function getBitangent(subject, hull) {
+                var bitangent = [];
+                for(var i=0; i<hull.length; i++) {
+                    var prevPoint = hull[i];
+                    var corner    = hull[(i + 1) % hull.length];
+                    var nextPoint = hull[(i + 2) % hull.length];
+                    var prevWall  = new Edge(prevPoint, corner   );
+                    var nextWall  = new Edge(corner   , nextPoint);
+                    var prevSide  = getSide(prevWall, subject);
+                    var nextSide  = getSide(nextWall, subject);
+                    var isDiffSide = (prevSide != nextSide);
+                    if(isDiffSide) { bitangent.push(corner); }
+                }
+                bitangent.sort( multiCriteria );
+                return bitangent;
+            }
+
+            Array.prototype.allValuesEqual = function(value) {
+                for(var i=0; i<this.length; i++) {
+                    if(this[i] !== value) { return false; }
+                }
+                return -1;
+            }
+
+            Array.prototype.indexOfPoint = function(point) {
+                for(var i=0; i<this.length; i++) {
+                    if( this[i].equal(point) ) { return i; }
+                }
+                return false;
+            }
+
+            function multiCriteria(a, b) {
+                if(a.x == b.x) { return a.y - b.y; } 
+                else { return a.x - b.x; };
+            }
+
+            function getVisibleEdgePoints(point, hull) {
+                var arrows=[], visible=[];
+                for(var i=0; i<hull.length; i++) { arrows.push(new Edge(hull[i], point)); }
+                hullShell.set(hull);
+                var hullEdges = hullShell.getEdges();
+                for(var i=0; i<arrows.length; i++) {
+                    var arrow=arrows[i], p1=arrow.p1, q1=arrow.p2, intersections=[];
+                    for(var j=0; j<hullEdges.length; j++) {
+                        var edge=hullEdges[j], p2=edge.p1, q2=edge.p2;
+                        var intersect = doIntersect(p1, q1, p2, q2);
+                        intersections.push(intersect);
+                    }
+                    if(intersections.allValuesEqual(false)) {  visible.push(arrow.p1); }
+                }
+                visible = getConvexHull(visible); //Sort into clockwise order
+                var bitangent = getBitangent(point, hull); //*
+                //console.log('bitangent: ', bitangent);
+                while(!visible[0].equal(bitangent[0])) { visible.push(visible.shift()); } //Keep rotating until a bitangent becomes the first element
+                var last = visible[visible.length-1]; //If the bitangents don't line up with the first and last elements then we need to sort into the opposite orientation. See getTestPoints5(): visible = [p1,p4,p3], no amount of shifting will get the bitangents to line up with the first and last elements in the array, opposite orientation is the only way.
+                if(!last.equal(bitangent[1])) { visible = getConvexHull(visible, true); } //Sort into counterclockwise order
+                //console.log('visible: ', visible);
+                return visible;
+            }
+
+            function triangulate(single, hull) {
+                var visible = getVisibleEdgePoints(single, hull);
+                for(var i=0; i<visible.length-1; i++) {
+                    var p1 = visible[i],
+                        p2 = visible[i+1];
+                    var triangle = new Triangle(p1, p2, single);
+                    triangles.push(triangle);
+                }
+            }
+
+            function triangulation(set) {
+                if(set.length < 4) { return false; }
+                var tempHull = [ set[0], set[1], set[2] ];
+                var firstTriangle = new Triangle(set[0], set[1], set[2]);
+                triangles.push(firstTriangle);
+                for(var i=3; i<set.length; i++) {
+                    var subject = set[i];
+                    triangulate(subject, tempHull);
+                    tempHull.push(subject);
+                    tempHull = getConvexHull(tempHull);
+                }
+            }
+            
+        </script>
+    </head>
+
+    <body bgcolor="#000000">
+        <h1 style="text-align:center;color:white;">Triangulation 9</h1>
+        <div style="width:100%;">
+            <canvas id="silhouette" width="800px" height="450px" style="display:block;margin: 0 auto;"></canvas>
+            <div style="color:white;margin:50px auto 0 auto;width:800px;">
+                <ul>
+                    <li>Running convex hull on the visible edge points to sort them in cw or ccw order before creating triangles.</li>
+                    <li>The visible edge points need to be shifted so that it starts with one bitangent and ends with the other bitangent.</li>
+                    <li>Sometimes no amount of shifting will get the correct result, in this case sorting the points in the opposite orientation is the only way to get them to line up in an arc.</li>
+                    <li><button id='animate'>Animate</button><button id='refresh'>Refresh</button></li>
+                </ul>
+            </div>
+        </div>
+        <div style="text-align: center; margin-top:50px;"><button id='next' onclick="gotoNextPage();">Next</button></div>
+
+        <script>
+            var canvas = document.getElementById('silhouette');
+            paint();
+            document.querySelector('#animate').onclick = function(){ animate(); }
+            document.querySelector('#refresh').onclick = function(){ paint(); }
+        </script>
+    </body>
+<html>

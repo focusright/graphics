@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+        <script src="common.js"></script>
+        <script> 
+            var MAX_POINTS = 60;
+            var points=[], ctx, hull=[];
+            var hullShell = { 
+                points: hull,
+                push: function(point) { this.points.push(point) },
+                draw: function() {
+                    for(var i=0; i<this.points.length; i++) {
+                        this.points[i].draw('red');
+                    }
+                },
+                drawEdges: function() {
+                    var p = this.points;
+                    if(p.length < 2) { return; }
+                    for(var i=0; i<p.length-1; i++) {
+                        var edge = new Edge(p[i], p[i+1]);
+                        edge.draw();
+                    }
+                    (new Edge(p[p.length-1], p[0])).draw();
+                }
+            };
+            function Point(x, y, name) { var self = this;
+                this.x = x;
+                this.y = y;
+                this.name = name;
+                this.equal = function(point) {
+                    if(point.x == this.x && point.y == this.y) { return true; }
+                    else { return false; }
+                }
+                this.draw = function(color) {
+                    var size = 5
+                    if(color) {
+                        var originalColor = ctx.fillStyle;  //Save original color
+                        ctx.fillStyle = color;
+                        ctx.fillRect(self.x, self.y, size, size);
+                        ctx.fillStyle = originalColor;  //revert original color
+                    } else {
+                        ctx.fillRect(self.x, self.y, size, size);
+                    }
+                }
+            }
+            function Edge(p1,p2) { var self = this;
+                this.p1 = p1;
+                this.p2 = p2;
+                this.name = p1.name + " -> " + p2.name;
+                this.length = (function(){ return Math.sqrt(Math.pow(self.p2.x-self.p1.x,2)+Math.pow(self.p2.y-self.p1.y,2)); })();
+                this.draw = function() {
+                    ctx.beginPath();
+                    ctx.moveTo(self.p1.x, self.p1.y);
+                    ctx.lineTo(self.p2.x, self.p2.y);
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+            }
+            function rand(n)  { return Math.floor((Math.random() * (n==undefined?10:n) + 1)); }
+            function getPoints() {
+                var x=[], y=[];
+                for(var i=0; i<MAX_POINTS; i++) {
+                    x.push(rand(canvas.width));
+                    y.push(rand(canvas.height));
+                }
+                x.sort(function(a,b){return a-b;});
+                for(var i=0; i<x.length; i++) {
+                    var p = new Point(x[i], y[i]);
+                    points.push(p);
+                }
+            }
+
+            function paint(canvas, algorithm) {
+                points.length = hull.length = 0;
+                ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "black";
+                getPoints();
+                //drawPoints('red');
+                
+                var p1 = new Point(100,200,'p1'),
+                    p2 = new Point(150,150,'p2'),
+                    p3 = new Point(170,250,'p3'),
+
+                    p4 = new Point(190,100,'p4'),
+                    p5 = new Point(200,180,'p5'),
+
+                    p6 = new Point(230,210,'p6'),
+                    p7 = new Point(280,270,'p7');
+
+                //points = [p1,p2,p3,p4,p5,p6,p7];
+                //points = [p1,p2,p3,p4];
+                drawPoints('black');
+                if(algorithm) { algorithm(); }
+                else { convexHull1(); }
+                hullShell.draw();
+                hullShell.drawEdges();
+            }
+            function drawPoints(color) { for(var i=0; i<points.length; i++) { points[i].draw(color); } }
+
+            //http://www.geeksforgeeks.org/convex-hull-set-1-jarviss-algorithm-or-wrapping/
+            function convexHull1() {
+                function orientation(p, q, r) {
+                    var val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);  // 0 --> p, q and r are colinear
+                    if (val == 0) { return 0; }  // colinear                          // 1 --> Clockwise
+                    return (val > 0)? 1: 2;      // clock or counterclock wise        // 2 --> Counterclockwise
+                }
+                var p = 0, q, n = points.length;
+                do {
+                    hull.push(points[p]);
+                    q = (p + 1) % n;
+                    for (var i=0; i<n; i++)  {
+                        var side = orientation(points[p], points[i], points[q]);
+                        if (side == 2) { q = i; }
+                    }
+                    p = q;
+                } while (p != 0);
+            } //http://www.geeksforgeeks.org/convex-hull-set-1-jarviss-algorithm-or-wrapping/
+            
+            function convexHull2() {                                       //Modifying convexHull1()
+                var edgeStart = 0, subject;                                //This is a nested loop. For the outer loop think of a subject point that is one ahead of the current point which is the starting point of an edge, the ending point of that edge will be all other points in the set, including the subject and edge start points
+                do {                                                       //The inner loop will make edges out of current point and all other points in the set, to find the left most edge, like bubble sort finding the min or max.
+                    hull.push(points[edgeStart]);                          //This point is a part of the hull because in starting it is 0 which is the left most x sorted point, in iteration the end of the outer loop will reassign edgeStart to the appropriate point
+                    subject = (edgeStart + 1) % points.length;             //The next point in x sorted sequence is the subject point. The mod must be there because when the subject becomes the last point in the set (highest x sorted point) the inner loop needs to create edges that point backwards from this last point to the first points in the set (lowest x sorted)
+                    for (var i=0; i<points.length; i++) {                  //Loop through all points and create edge E from edgeStart
+                        var edge = new Edge(points[edgeStart], points[i]); //to that point (point[i], which is also EdgeEnd)
+                        var side = getSide(edge, points[subject]);         //My function getSide(), -1 = point is on the left of edge
+                        if (side == -1) { subject = i; }                   //If E is to the left of subject then change the next-to-be-subject point to i
+                    }                                                      //This is like bubble sort, looping through each number to find the min or max in the inner loop
+                    edgeStart = subject;                                   //Make the next edgeStart in the iteration into the left most edgeEnd point
+                } while (edgeStart != 0);                                  //edgeStart will be 0 after the last hull edge has already been found and the loop still tries to find one more hull point. This will set edgeStart to the first point index 0 and break out of the loop.
+            }
+
+            //https://en.wikipedia.org/wiki/Gift_wrapping_algorithm  //Javascript translation of the pseudocode on the page
+            //jarvis(S)
+            //   pointOnHull = leftmost point in S
+            //   i = 0
+            //   repeat
+            //      P[i] = pointOnHull
+            //      endpoint = S[0]         // initial endpoint for a candidate edge on the hull
+            //      for j from 1 to |S|
+            //         if (endpoint == pointOnHull) or (S[j] is on left of line from P[i] to endpoint)
+            //            endpoint = S[j]   // found greater left turn, update endpoint
+            //      i = i+1
+            //      pointOnHull = endpoint
+            //   until endpoint == P[0]      // wrapped around to first hull point
+            
+            function convexHull3() { //Translation of pseudocode jarvis(S)
+                isOnLeft = function(Sj, Pi, endpoint) { return getSide(new Edge(Pi, endpoint), Sj) == -1; };
+                var P = [];
+                var S = points;
+                var pointOnHull = S[0], endpoint;
+                var i = 0;
+                do {
+                  P[i] = pointOnHull;
+                  endpoint = S[0];     //This is key. The endpoint is always S[0]
+                  for (var j=1; j<S.length; j++) {
+                     if ( (endpoint == pointOnHull) || isOnLeft(S[j], P[i], endpoint) ) {
+                        endpoint = S[j];
+                     }
+                  }
+                  i = (i + 1) % S.length; //This is modified, otherwise inifinite loop
+                  pointOnHull = endpoint;
+                } while (i != 0);
+                for (var i=0; i<P.length; i++) { if(hull.indexOf(P[i]) == -1) { hull.push(P[i]); } } //Remove duplicates in P. Since endpoint is always S[0] there will always be duplicates using this particular algorithm.
+            } //https://en.wikipedia.org/wiki/Gift_wrapping_algorithm
+            
+            function getSide(edge, point) { //right side is 1, left is -1, vector starts from edge.p1 to edge.p2
+                function determinant(vector1, vector2) { return (vector1.x * vector2.y) - (vector1.y * vector2.x); }
+                var origin = edge.p1; //Translate other points to have edge.p1 as the origin
+                var point1 = edge.p2;
+                var point2 = point;
+                var vector1 = new Point(point1.x - origin.x, point1.y - origin.y);
+                var vector2 = new Point(point2.x - origin.x, point2.y - origin.y);
+                var det = determinant(vector1, vector2);
+                return Math.sign(det);
+            }
+        </script>
+    </head>
+
+    <body bgcolor="#000000">
+        <h1 style="text-align:center;color:white;">Triangulation 6</h1>
+        <div style="width:100%;">
+            <canvas id="silhouette" width="800px" height="450px" style="display:block;margin: 0 auto;"></canvas>
+            <div style="color:white;margin:50px auto 0 auto;width:800px;">
+                <ul>
+                    <li>Point based convex hull</li>
+                    <li><a href="https://en.wikipedia.org/wiki/Gift_wrapping_algorithm">Gift wrapping algorithm</a> <button id='giftwrap'>Use</button></li>
+                    <li><a href="http://www.geeksforgeeks.org/convex-hull-set-1-jarviss-algorithm-or-wrapping/">Jarvis’s Algorithm or Wrapping</a> <button id='jarvis'>Use</button></li>
+                </ul>
+            </div>
+        </div>
+        <div style="text-align: center; margin-top:50px;"><button id='next' onclick="gotoNextPage();">Next</button></div>
+
+        <style> #giftwrap, #jarvis { cursor: pointer; } </style>
+
+        <script>
+            var canvas = document.getElementById('silhouette');
+            paint(canvas);
+
+            document.querySelector('#giftwrap').onclick = function(){ paint(canvas, convexHull2); }
+            document.querySelector('#jarvis'  ).onclick = function(){ paint(canvas, convexHull3); }
+        </script>
+    </body>
+<html>

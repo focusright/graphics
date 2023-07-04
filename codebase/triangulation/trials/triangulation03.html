@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+        <script src="common.js"></script>
+        <script>
+            var MAX_POINTS = 60;
+            var points = [], ctx;
+
+            function Point(x, y) { this.x = x; this.y = y; }
+            function Edge(p1,p2) {
+                this.p1 = p1;
+                this.p2 = p2;
+                this.dist = distance(p1,p2);
+            }
+            function distance(p1, p2) { 
+                return Math.sqrt(Math.pow(p2.x-p1.x,2)+Math.pow(p2.y-p1.y,2)); 
+            }
+            function rand(n)  { return Math.floor((Math.random() * (n==undefined?10:n) + 1)); }
+            function getPoints() {
+                var x=[], y=[];
+                for(var i=0; i<MAX_POINTS; i++) {
+                    x.push(rand(canvas.width));
+                    y.push(rand(canvas.height));
+                }
+                x.sort(function(a,b){return a-b;});
+                for(var i=0; i<x.length; i++) { 
+                    var p = new Point(x[i], y[i]);
+                    points.push(p);
+                }
+            }
+            function nearestNeighborSimple(subject) {
+                var minDist = 9999999, nn;
+                for(var i=0;i<points.length;i++) {
+                    var test = points[i];
+                    if(subject.x != test.x && subject.y != test.y) {
+                        var dist = distance(subject, test);
+                        if(dist < minDist) { 
+                            minDist = dist; 
+                            nn = test;
+                        }
+                    }
+                }
+                return nn;
+            }
+            function nearestNeighbor(subject, rank) {
+                var edges = [];
+                for(var i=0;i<points.length;i++) {
+                    var point = points[i];
+                    var edge = new Edge(subject, point);
+                    edges.push(edge);
+                }
+                edges.sort(function(a,b){ return a.dist - b.dist; });
+                var index = 1;
+                if(rank) { index = rank; }
+                return edges[index].p2;
+            }
+            function drawLine(p1, p2) {
+                ctx.beginPath();
+                ctx.moveTo(p1.x,p1.y);
+                ctx.lineTo(p2.x,p2.y);
+                ctx.closePath();
+                ctx.stroke();
+            }
+            function draw() {
+                for(var i=0;i<points.length;i++) {
+                    var subject = points[i];
+                    var nearest = nearestNeighbor(subject, 1);
+                    var secondn = nearestNeighbor(subject, 2);
+                    drawLine(subject, nearest);
+                    drawLine(subject, secondn);
+                    drawLine(nearest, secondn);
+                }
+            }
+            function paint(canvas) {
+                ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#000000";
+                getPoints();
+                draw();
+            }
+        </script>
+    </head>
+
+    <body bgcolor="#000000">
+        <h1 style="text-align:center;color:white;">Triangulation 3</h1>
+        <div style="width:100%;">
+            <canvas id="silhouette" width="800px" height="450px" style="display:block;margin: 0 auto;"></canvas>
+            <div style="color:white;margin:50px auto 0 auto;width:800px;">For each point find the two nearest neighbors and draw that triangle</div>
+        </div>
+        <div style="text-align: center; margin-top:50px;"><button id='next' onclick="gotoNextPage();">Next</button></div>
+
+        <script>
+            var canvas = document.getElementById('silhouette');
+            paint(canvas);
+        </script>
+    </body>
+<html>
