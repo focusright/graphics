@@ -14,19 +14,23 @@
     <body>
         <div id="output"></div>
         <script type="text/javascript">
-            const WIDTH = 5, HEIGHT = 5;
+            const WIDTH = 5, HEIGHT = 5, PIECES = 5; //can change to see result
             var scene = new THREE.Scene();
             var camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 );
-            camera.position.z = 10;
+            camera.position.z = 12;
 
             var renderer = new THREE.WebGLRenderer();
             renderer.setSize( window.innerWidth, window.innerHeight );
             document.body.appendChild( renderer.domElement );
-            var plane;
-            const material = new THREE.MeshBasicMaterial( { color: 0x00ff00, wireframe: false } );
-            plane = new THREE.Mesh(new THREE.PlaneGeometry(WIDTH, HEIGHT), material);
-            plane.material.side = THREE.DoubleSide;
-            scene.add(plane);
+            var material = new THREE.MeshBasicMaterial( { color: 0x00ff00, wireframe: false } );
+            material.side = THREE.DoubleSide;
+
+            for(var i=0; i<PIECES; i++) {
+                const newHeight = HEIGHT / PIECES;
+                var plane = new THREE.Mesh(new THREE.PlaneGeometry(WIDTH, newHeight), material);
+                plane.position.y = (i * newHeight) + (i * 0.2) - 2; //0.2 is gap, -2 is y offset to center mesh
+                scene.add(plane);
+            }
 
             function render() {
                 requestAnimationFrame( render );

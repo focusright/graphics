@@ -26,8 +26,8 @@
             const loader = new THREE.TextureLoader().load("./wood.jpg",
                 function ( texture ) {
                     const material = new THREE.MeshBasicMaterial( {map: texture });
+                    material.side = THREE.DoubleSide;
                     plane = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), material);
-                    plane.material.side = THREE.DoubleSide;
                     scene.add(plane);
                     render();
                 },
