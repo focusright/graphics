@@ -28,14 +28,8 @@
           const firstMatrix = new Float32Array([
             2 /* rows */,
             4 /* columns */,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8
+            1, 2, 3, 4,
+            5, 6, 7, 8
           ]);
 
           const gpuBufferFirstMatrix = device.createBuffer({
@@ -52,14 +46,10 @@
           const secondMatrix = new Float32Array([
             4 /* rows */,
             2 /* columns */,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8
+            1, 2,
+            3, 4,
+            5, 6,
+            7, 8
           ]);
 
           const gpuBufferSecondMatrix = device.createBuffer({
