@@ -63,8 +63,7 @@
 
           // Result Matrix
 
-          const resultMatrixBufferSize =
-            Float32Array.BYTES_PER_ELEMENT * (2 + firstMatrix[0] * secondMatrix[1]);
+          const resultMatrixBufferSize = Float32Array.BYTES_PER_ELEMENT * (2 + firstMatrix[0] * secondMatrix[1]);
           const resultMatrixBuffer = device.createBuffer({
             size: resultMatrixBufferSize,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
