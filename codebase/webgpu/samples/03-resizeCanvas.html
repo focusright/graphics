@@ -133,10 +133,10 @@
 
                     // Resize the multisampled render target to match the new canvas size.
                     renderTarget = device.createTexture({
-                    size: [canvas.width, canvas.height],
-                    sampleCount,
-                    format: presentationFormat,
-                    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+                        size: [canvas.width, canvas.height],
+                        sampleCount,
+                        format: presentationFormat,
+                        usage: GPUTextureUsage.RENDER_ATTACHMENT,
                     });
 
                     renderTargetView = renderTarget.createView();
@@ -147,11 +147,11 @@
                 const renderPassDescriptor = {
                     colorAttachments: [
                         {
-                        view: renderTargetView,
-                        resolveTarget: context.getCurrentTexture().createView(),
-                        clearValue: { r: 0.2, g: 0.2, b: 0.2, a: 1.0 },
-                        loadOp: 'clear',
-                        storeOp: 'store',
+                            view: renderTargetView,
+                            resolveTarget: context.getCurrentTexture().createView(),
+                            clearValue: { r: 0.2, g: 0.2, b: 0.2, a: 1.0 },
+                            loadOp: 'clear',
+                            storeOp: 'store',
                         },
                     ],
                 };
