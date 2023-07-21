@@ -3,10 +3,24 @@
     <head>
         <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
         <title>Hello Triangle MSAA</title>
+        <style>
+            canvas {
+                max-width: 600px;
+                aspect-ratio: 1;
+            }
+
+            .wrapper {
+                text-align: center;
+                position: relative;
+                display: block;
+            }
+        </style>
     </head>
     
     <body>
-        <canvas width="600" height="600"></canvas>
+        <div class="wrapper">
+            <canvas width="600" height="600"></canvas>
+        </div>
         <script type="module">
             const triangleVertWGSL = `
                 @vertex
