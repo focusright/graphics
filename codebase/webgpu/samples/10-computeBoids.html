@@ -3,6 +3,7 @@
     <head>
         <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
         <title>Compute Boids</title>
+        <script src="./assets/dat.gui.js"></script>
         <style>
             canvas {
                 max-width: 600px;
@@ -22,6 +23,8 @@
             <canvas width="600" height="600"></canvas>
         </div>
         <script type="module">
+            var gui = new dat.gui.GUI(); //https://github.com/dataarts/dat.gui/blob/master/example.html
+
             const spriteWGSL = `
                 struct VertexOutput {
                   @builtin(position) position : vec4<f32>,
@@ -280,14 +283,14 @@
             }
 
             updateSimParams();
-            // Object.keys(simParams).forEach((k) => {
-            //     const key = k;
-            //     if (gui === undefined) {
-            //         console.error('GUI not initialized');
-            //     } else {
-            //         gui.add(simParams, key).onFinishChange(updateSimParams);
-            //     }
-            // });
+            Object.keys(simParams).forEach((k) => {
+                const key = k;
+                if (gui === undefined) {
+                    console.error('GUI not initialized');
+                } else {
+                    gui.add(simParams, key).onFinishChange(updateSimParams);
+                }
+            });
 
             const numParticles = 1500;
             const initialParticleData = new Float32Array(numParticles * 4);
