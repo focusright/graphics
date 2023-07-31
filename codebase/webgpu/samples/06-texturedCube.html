@@ -22,7 +22,7 @@
             <canvas width="600" height="600"></canvas>
         </div>
         <script type="module">
-            import { mat4, vec3 } from './wgpu-matrix.module.js';
+            import { mat4, vec3 } from './assets/wgpu-matrix.module.js';
 
             const cubeVertexSize = 4 * 10; // Byte size of one cube vertex.
             const cubePositionOffset = 0;
@@ -204,7 +204,7 @@
             // Fetch the image and upload it into a GPUTexture.
             let cubeTexture;
             {
-                const response = await fetch(new URL('./Di-3d.png', import.meta.url).toString());
+                const response = await fetch(new URL('./assets/Di-3d.png', import.meta.url).toString());
                 const imageBitmap = await createImageBitmap(await response.blob());
 
                 cubeTexture = device.createTexture({
