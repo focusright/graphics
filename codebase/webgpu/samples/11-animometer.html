@@ -271,7 +271,11 @@
                 const maxMappingLength = (14 * 1024 * 1024) / Float32Array.BYTES_PER_ELEMENT;
                 for (let offset = 0; offset < uniformBufferData.length; offset += maxMappingLength) {
                     const uploadCount = Math.min(uniformBufferData.length - offset, maxMappingLength);
-                    device.queue.writeBuffer(uniformBuffer, offset * Float32Array.BYTES_PER_ELEMENT, uniformBufferData.buffer, uniformBufferData.byteOffset + offset * Float32Array.BYTES_PER_ELEMENT, uploadCount * Float32Array.BYTES_PER_ELEMENT);
+                    device.queue.writeBuffer(uniformBuffer,
+                                             offset * Float32Array.BYTES_PER_ELEMENT, 
+                                             uniformBufferData.buffer,
+                                             uniformBufferData.byteOffset + offset * Float32Array.BYTES_PER_ELEMENT,
+                                             uploadCount * Float32Array.BYTES_PER_ELEMENT);
                 }
 
                 function recordRenderPass(passEncoder) {
@@ -366,13 +370,9 @@
                 frameTimeAvg = (1 - w) * frameTimeAvg + w * frameTime;
                 jsTimeAvg = (1 - w) * jsTimeAvg + w * jsTime;
                 if (updateDisplay) {
-                    perfDisplay.innerHTML = `Avg Javascript: ${jsTimeAvg.toFixed(
-                    2
-                  )} ms\nAvg Frame: ${frameTimeAvg.toFixed(2)} ms`;
+                    perfDisplay.innerHTML = `Avg Javascript: ${jsTimeAvg.toFixed(2)} ms\nAvg Frame: ${frameTimeAvg.toFixed(2)} ms`;
                     updateDisplay = false;
-                    setTimeout(() => {
-                        updateDisplay = true;
-                    }, 100);
+                    setTimeout(() => { updateDisplay = true; }, 100);
                 }
                 requestAnimationFrame(frame);
             }
