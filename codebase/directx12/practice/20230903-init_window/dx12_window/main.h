@@ -1,3 +1,6 @@
+#pragma comment(lib, "D3D12.lib")
+#pragma comment(lib, "dxgi.lib")
+
 #include "d3dx12.h"
 #include <dxgi1_6.h>
 #include <stdexcept>
