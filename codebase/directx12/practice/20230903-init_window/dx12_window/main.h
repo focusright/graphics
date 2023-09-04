@@ -4,8 +4,10 @@
 #include "d3dx12.h"
 #include <dxgi1_6.h>
 #include <stdexcept>
+#include <DirectXColors.h>
 
 using Microsoft::WRL::ComPtr;
+using namespace DirectX;
 
 static const UINT FrameCount = 2;
 
