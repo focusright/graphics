@@ -60,8 +60,8 @@
                 @fragment
                 fn frag_main(@location(0) fragUV : vec2<f32>) -> @location(0) vec4<f32> {
                     return textureSample(myTexture, mySampler, fragUV);
-                }`;
-            
+                }
+            `;
             const triangleVertWGSL = `
                 @vertex
                 fn vert_main(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4<f32> {
@@ -76,14 +76,46 @@
                 @fragment
                 fn frag_main() -> @location(0) vec4<f32> {
                     return vec4(1.0, 0.0, 0.0, 1.0);
-                }`;
+                }
+            `;
 
             const fragblurWGSL = `
                 @group(0) @binding(0) var samp : sampler;
                 @group(1) @binding(1) var inputTex : texture_2d<f32>;
-                @group(1) @binding(2) var outputTex : texture_storage_2d<rgba8unorm, write>;
+            `;
 
+            const vertexTextureQuad =`
+                @vertex
+                fn main(
+                    @builtin(vertex_index) VertexIndex : u32
+                ) -> @builtin(position) vec4<f32> {
+                    const pos = array(
+                        vec2(-1.0, -1.0), vec2(1.0, -1.0), vec2(-1.0, 1.0),
+                        vec2(-1.0, 1.0), vec2(1.0, -1.0), vec2(1.0, 1.0),
+                    );
 
+                    return vec4<f32>(pos[VertexIndex], 0.0, 1.0);
+                }
+            `;
+            const fragmentGBuffersDebugView =`
+                @group(0) @binding(0) var gBufferAlbedo: texture_2d<f32>;
+
+                override canvasSizeWidth: f32;
+                override canvasSizeHeight: f32;
+
+                @fragment
+                fn main(
+                    @builtin(position) coord : vec4<f32>
+                ) -> @location(0) vec4<f32> {
+                    var result : vec4<f32>;
+                    let c = coord.xy / vec2<f32>(canvasSizeWidth, canvasSizeHeight);
+                    result = textureLoad(
+                        gBufferAlbedo,
+                        vec2<i32>(floor(coord.xy)),
+                        0
+                    );
+                    return result;
+                }
             `;
 
             const canvas = document.querySelector("canvas");
@@ -102,6 +134,12 @@
                 alphaMode: 'premultiplied',
             });
             
+            const gBufferTexture = device.createTexture({
+                size: [canvas.width, canvas.height],
+                usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+                format: 'bgra8unorm',
+            });
+
             const fullscreenQuadPipeline = device.createRenderPipeline({
                 layout: 'auto',
                 vertex: {
@@ -116,9 +154,7 @@
                     }),
                     entryPoint: 'frag_main',
                     targets: [
-                        {
-                            format: presentationFormat,
-                        },
+                        { format: 'bgra8unorm' },
                     ],
                 },
                 primitive: {
@@ -196,28 +232,99 @@
                 },
             });
 
-            function frame() {
-                const commandEncoder = device.createCommandEncoder();
+            const writeGBufferPassDescriptor = {
+                colorAttachments: [
+                    {
+                        view: gBufferTexture.createView(),
+                        clearValue: { r: 0.0, g: 0.0, b: 1.0, a: 1.0 },
+                        loadOp: 'clear',
+                        storeOp: 'store',
+                    }
+                ],
+            };
 
-                const passEncoder = commandEncoder.beginRenderPass({
-                    colorAttachments: [
+            const gBufferTexturesBindGroupLayout = device.createBindGroupLayout({
+                entries: [
+                    {
+                        binding: 0,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        texture: {
+                            sampleType: 'unfilterable-float',
+                        },
+                    },
+                ],
+            });
+
+            const gBufferTexturesBindGroup = device.createBindGroup({
+                layout: gBufferTexturesBindGroupLayout,
+                entries: [
+                    {
+                        binding: 0,
+                        resource: gBufferTexture.createView(),
+                    },
+                ],
+            });
+
+            const gBuffersDebugViewPipeline = device.createRenderPipeline({
+                layout: device.createPipelineLayout({
+                    bindGroupLayouts: [gBufferTexturesBindGroupLayout],
+                }),
+                vertex: {
+                    module: device.createShaderModule({
+                        code: vertexTextureQuad,
+                    }),
+                    entryPoint: 'main',
+                },
+                fragment: {
+                    module: device.createShaderModule({
+                        code: fragmentGBuffersDebugView,
+                    }),
+                    entryPoint: 'main',
+                    targets: [
                         {
-                            view: context.getCurrentTexture().createView(),
-                            clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-                            loadOp: 'clear',
-                            storeOp: 'store',
+                            format: presentationFormat,
                         },
                     ],
-                });
+                    constants: {
+                        canvasSizeWidth: canvas.width,
+                        canvasSizeHeight: canvas.height,
+                    },
+                },
+                primitive: {
+                    topology: 'triangle-list',
+                },
+            });
 
-                passEncoder.setPipeline(fullscreenQuadPipeline);
-                passEncoder.setBindGroup(0, showResultBindGroup);
-                passEncoder.draw(6, 1, 0, 0);
-
-                passEncoder.setPipeline(trianglePipeline);
-                passEncoder.draw(3, 1, 0, 0);
-
-                passEncoder.end();
+            function frame() {
+                const commandEncoder = device.createCommandEncoder();
+                {
+                    const gBufferPass = commandEncoder.beginRenderPass(writeGBufferPassDescriptor);
+                    gBufferPass.setPipeline(fullscreenQuadPipeline);
+                    gBufferPass.setBindGroup(0, showResultBindGroup);
+                    gBufferPass.draw(6, 1, 0, 0);
+                    gBufferPass.setPipeline(trianglePipeline);
+                    gBufferPass.draw(3, 1, 0, 0);
+                    gBufferPass.end();
+                }
+                {
+                    
+                }
+                {
+                    const renderPass = commandEncoder.beginRenderPass({
+                        colorAttachments: [
+                            {
+                                view: context.getCurrentTexture().createView(),
+                                clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+                                loadOp: 'clear',
+                                storeOp: 'store',
+                            },
+                        ],
+                    });
+                    renderPass.setPipeline(gBuffersDebugViewPipeline);
+                    renderPass.setBindGroup(0, gBufferTexturesBindGroup);
+                    renderPass.draw(6);
+                    renderPass.end();
+                }
                 device.queue.submit([commandEncoder.finish()]);
 
                 requestAnimationFrame(frame);
