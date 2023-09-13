@@ -80,8 +80,42 @@
             `;
 
             const fragblurWGSL = `
-                @group(0) @binding(0) var samp : sampler;
-                @group(1) @binding(1) var inputTex : texture_2d<f32>;
+                @group(0) @binding(0) var gBufferAlbedo: texture_2d<f32>;
+
+                fn loadPixel(i:i32, size:u32, coordinate:vec4<f32>) -> vec4<f32> {
+                    var result : vec4<f32>;
+                    for(var j=-1; i<=1; j++) {
+                        result += textureLoad(gBufferAlbedo, vec2<i32>(i32(coordinate.x)+i32(i), i32(coordinate.y)+i32(j)), 0);
+                    }
+                    return result;
+                }
+
+                @fragment
+                fn main(
+                    @builtin(position) coord : vec4<f32>
+                ) -> @location(0) vec4<f32> {
+                    var result : vec4<f32>;
+                    var p1 = textureLoad(gBufferAlbedo, vec2<i32>(i32(coord.x-1), i32(coord.y-1)), 0);
+                    var p2 = textureLoad(gBufferAlbedo, vec2<i32>(i32(coord.x  ), i32(coord.y-1)), 0);
+                    var p3 = textureLoad(gBufferAlbedo, vec2<i32>(i32(coord.x+1), i32(coord.y-1)), 0);
+                    var p4 = textureLoad(gBufferAlbedo, vec2<i32>(i32(coord.x-1), i32(coord.y  )), 0);
+                    var p5 = textureLoad(gBufferAlbedo, vec2<i32>(i32(coord.x  ), i32(coord.y  )), 0);
+                    var p6 = textureLoad(gBufferAlbedo, vec2<i32>(i32(coord.x+1), i32(coord.y  )), 0);
+                    var p7 = textureLoad(gBufferAlbedo, vec2<i32>(i32(coord.x-1), i32(coord.y+1)), 0);
+                    var p8 = textureLoad(gBufferAlbedo, vec2<i32>(i32(coord.x  ), i32(coord.y+1)), 0);
+                    var p9 = textureLoad(gBufferAlbedo, vec2<i32>(i32(coord.x+1), i32(coord.y+1)), 0);
+                    result = (p1+p2+p3+p4+p5+p6+p7+p8+p9) / 9;
+                    return result;
+
+                    // const windowSize:u32 = 3;
+                    // const boundary:u32 = windowSize / 2;
+                    // var result : vec4<f32>;
+                    // for (var i=0; i<=1; i++) {
+                    //     result += loadPixel(i, windowSize, coord); //Currently nested loops here blows up webgpu, even with function calls (9/13/23)
+                    // }
+                    // return (result / f32(windowSize*windowSize));
+
+                }
             `;
 
             const vertexTextureQuad =`
@@ -135,6 +169,11 @@
             });
             
             const gBufferTexture = device.createTexture({
+                size: [canvas.width, canvas.height],
+                usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+                format: 'bgra8unorm',
+            });
+            const gBufferTexture2 = device.createTexture({
                 size: [canvas.width, canvas.height],
                 usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
                 format: 'bgra8unorm',
@@ -242,8 +281,30 @@
                     }
                 ],
             };
+            const blurPassDescriptor = {
+                colorAttachments: [
+                    {
+                        view: gBufferTexture2.createView(),
+                        clearValue: { r: 0.0, g: 0.0, b: 1.0, a: 1.0 },
+                        loadOp: 'clear',
+                        storeOp: 'store',
+                    }
+                ],
+            };
+
 
             const gBufferTexturesBindGroupLayout = device.createBindGroupLayout({
+                entries: [
+                    {
+                        binding: 0,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        texture: {
+                            sampleType: 'unfilterable-float',
+                        },
+                    },
+                ],
+            });
+            const blurBindGroupLayout = device.createBindGroupLayout({
                 entries: [
                     {
                         binding: 0,
@@ -261,6 +322,15 @@
                     {
                         binding: 0,
                         resource: gBufferTexture.createView(),
+                    },
+                ],
+            });
+            const blurBindGroup = device.createBindGroup({
+                layout: blurBindGroupLayout,
+                entries: [
+                    {
+                        binding: 0,
+                        resource: gBufferTexture2.createView(),
                     },
                 ],
             });
@@ -295,6 +365,34 @@
                 },
             });
 
+            const blurPipeline = device.createRenderPipeline({
+                layout: device.createPipelineLayout({
+                    bindGroupLayouts: [blurBindGroupLayout],
+                }),
+                vertex: {
+                    module: device.createShaderModule({
+                        code: vertexTextureQuad,
+                    }),
+                    entryPoint: 'main',
+                },
+                fragment: {
+                    module: device.createShaderModule({
+                        code: fragblurWGSL,
+                    }),
+                    entryPoint: 'main',
+                    targets: [
+                        {
+                            format: presentationFormat,
+                        },
+                    ],
+                },
+                primitive: {
+                    topology: 'triangle-list',
+                },
+            });
+
+
+
             function frame() {
                 const commandEncoder = device.createCommandEncoder();
                 {
@@ -307,7 +405,11 @@
                     gBufferPass.end();
                 }
                 {
-                    
+                    const blurPass = commandEncoder.beginRenderPass(blurPassDescriptor);
+                    blurPass.setPipeline(blurPipeline);
+                    blurPass.setBindGroup(0, gBufferTexturesBindGroup);
+                    blurPass.draw(6, 1, 0, 0);
+                    blurPass.end();
                 }
                 {
                     const renderPass = commandEncoder.beginRenderPass({
@@ -321,7 +423,7 @@
                         ],
                     });
                     renderPass.setPipeline(gBuffersDebugViewPipeline);
-                    renderPass.setBindGroup(0, gBufferTexturesBindGroup);
+                    renderPass.setBindGroup(0, blurBindGroup);
                     renderPass.draw(6);
                     renderPass.end();
                 }
