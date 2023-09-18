@@ -22,7 +22,7 @@
             <canvas width="600" height="600"></canvas>
         </div>
         <script type="module">
-            const fullscreenTexturedQuadWGSL = `
+            const imageTexturedQuadWGSL = `
                 @group(0) @binding(0) var mySampler : sampler;
                 @group(0) @binding(1) var myTexture : texture_2d<f32>;
 
@@ -86,7 +86,7 @@
                 fn main(
                     @builtin(position) coord : vec4<f32>
                 ) -> @location(0) vec4<f32> {
-                    const windowSize = 20;
+                    const windowSize = 21;
                     const squared = i32(pow(windowSize, 2));
                     const boundary = windowSize / 2;
                     var result: vec4<f32>;
@@ -115,7 +115,7 @@
                     return vec4<f32>(pos[VertexIndex], 0.0, 1.0);
                 }
             `;
-            const fragmentGBuffersDebugView =`
+            const fragmentGBuffersView =`
                 @group(0) @binding(0) var gBufferAlbedo: texture_2d<f32>;
 
                 override canvasSizeWidth: f32;
@@ -152,7 +152,7 @@
                 alphaMode: 'premultiplied',
             });
             
-            const gBufferTexture = device.createTexture({
+            const gBufferTexture1 = device.createTexture({
                 size: [canvas.width, canvas.height],
                 usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
                 format: 'bgra8unorm',
@@ -163,17 +163,17 @@
                 format: 'bgra8unorm',
             });
 
-            const fullscreenQuadPipeline = device.createRenderPipeline({
+            const imageQuadPipleline = device.createRenderPipeline({
                 layout: 'auto',
                 vertex: {
                     module: device.createShaderModule({
-                        code: fullscreenTexturedQuadWGSL,
+                        code: imageTexturedQuadWGSL,
                     }),
                     entryPoint: 'vert_main',
                 },
                 fragment: {
                     module: device.createShaderModule({
-                        code: fullscreenTexturedQuadWGSL,
+                        code: imageTexturedQuadWGSL,
                     }),
                     entryPoint: 'frag_main',
                     targets: [
@@ -217,8 +217,8 @@
                 [imageBitmap.width, imageBitmap.height]
             );
 
-            const showResultBindGroup = device.createBindGroup({
-                layout: fullscreenQuadPipeline.getBindGroupLayout(0),
+            const imageQuadBindGroup = device.createBindGroup({
+                layout: imageQuadPipleline.getBindGroupLayout(0),
                 entries: [
                     {
                         binding: 0,
@@ -258,7 +258,7 @@
             const writeGBufferPassDescriptor = {
                 colorAttachments: [
                     {
-                        view: gBufferTexture.createView(),
+                        view: gBufferTexture1.createView(),
                         clearValue: { r: 0.0, g: 0.0, b: 1.0, a: 1.0 },
                         loadOp: 'clear',
                         storeOp: 'store',
@@ -305,7 +305,7 @@
                 entries: [
                     {
                         binding: 0,
-                        resource: gBufferTexture.createView(),
+                        resource: gBufferTexture1.createView(),
                     },
                 ],
             });
@@ -319,7 +319,7 @@
                 ],
             });
 
-            const gBuffersDebugViewPipeline = device.createRenderPipeline({
+            const gBuffersViewPipeline = device.createRenderPipeline({
                 layout: device.createPipelineLayout({
                     bindGroupLayouts: [gBufferTexturesBindGroupLayout],
                 }),
@@ -331,7 +331,7 @@
                 },
                 fragment: {
                     module: device.createShaderModule({
-                        code: fragmentGBuffersDebugView,
+                        code: fragmentGBuffersView,
                     }),
                     entryPoint: 'main',
                     targets: [
@@ -381,8 +381,8 @@
                 const commandEncoder = device.createCommandEncoder();
                 {
                     const gBufferPass = commandEncoder.beginRenderPass(writeGBufferPassDescriptor);
-                    gBufferPass.setPipeline(fullscreenQuadPipeline);
-                    gBufferPass.setBindGroup(0, showResultBindGroup);
+                    gBufferPass.setPipeline(imageQuadPipleline);
+                    gBufferPass.setBindGroup(0, imageQuadBindGroup);
                     gBufferPass.draw(6, 1, 0, 0);
                     gBufferPass.setPipeline(trianglePipeline);
                     gBufferPass.draw(3, 1, 0, 0);
@@ -406,7 +406,7 @@
                             },
                         ],
                     });
-                    renderPass.setPipeline(gBuffersDebugViewPipeline);
+                    renderPass.setPipeline(gBuffersViewPipeline);
                     renderPass.setBindGroup(0, blurBindGroup);
                     renderPass.draw(6);
                     renderPass.end();
