@@ -255,27 +255,6 @@
                 },
             });
 
-            const writeGBufferPassDescriptor = {
-                colorAttachments: [
-                    {
-                        view: gBufferTexture1.createView(),
-                        clearValue: { r: 0.0, g: 0.0, b: 1.0, a: 1.0 },
-                        loadOp: 'clear',
-                        storeOp: 'store',
-                    }
-                ],
-            };
-            const blurPassDescriptor = {
-                colorAttachments: [
-                    {
-                        view: gBufferTexture2.createView(),
-                        clearValue: { r: 0.0, g: 0.0, b: 1.0, a: 1.0 },
-                        loadOp: 'clear',
-                        storeOp: 'store',
-                    }
-                ],
-            };
-
 
             const gBufferTexturesBindGroupLayout = device.createBindGroupLayout({
                 entries: [
@@ -288,18 +267,6 @@
                     },
                 ],
             });
-            const blurBindGroupLayout = device.createBindGroupLayout({
-                entries: [
-                    {
-                        binding: 0,
-                        visibility: GPUShaderStage.FRAGMENT,
-                        texture: {
-                            sampleType: 'unfilterable-float',
-                        },
-                    },
-                ],
-            });
-
             const gBufferTexturesBindGroup = device.createBindGroup({
                 layout: gBufferTexturesBindGroupLayout,
                 entries: [
@@ -309,16 +276,6 @@
                     },
                 ],
             });
-            const blurBindGroup = device.createBindGroup({
-                layout: blurBindGroupLayout,
-                entries: [
-                    {
-                        binding: 0,
-                        resource: gBufferTexture2.createView(),
-                    },
-                ],
-            });
-
             const gBuffersViewPipeline = device.createRenderPipeline({
                 layout: device.createPipelineLayout({
                     bindGroupLayouts: [gBufferTexturesBindGroupLayout],
@@ -349,6 +306,27 @@
                 },
             });
 
+
+            const blurBindGroupLayout = device.createBindGroupLayout({
+                entries: [
+                    {
+                        binding: 0,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        texture: {
+                            sampleType: 'unfilterable-float',
+                        },
+                    },
+                ],
+            });
+            const blurBindGroup = device.createBindGroup({
+                layout: blurBindGroupLayout,
+                entries: [
+                    {
+                        binding: 0,
+                        resource: gBufferTexture2.createView(),
+                    },
+                ],
+            });
             const blurPipeline = device.createRenderPipeline({
                 layout: device.createPipelineLayout({
                     bindGroupLayouts: [blurBindGroupLayout],
@@ -376,7 +354,27 @@
             });
 
 
-
+            const writeGBufferPassDescriptor = {
+                colorAttachments: [
+                    {
+                        view: gBufferTexture1.createView(),
+                        clearValue: { r: 0.0, g: 0.0, b: 1.0, a: 1.0 },
+                        loadOp: 'clear',
+                        storeOp: 'store',
+                    }
+                ],
+            };
+            const blurPassDescriptor = {
+                colorAttachments: [
+                    {
+                        view: gBufferTexture2.createView(),
+                        clearValue: { r: 0.0, g: 0.0, b: 1.0, a: 1.0 },
+                        loadOp: 'clear',
+                        storeOp: 'store',
+                    }
+                ],
+            };
+            
             function frame() {
                 const commandEncoder = device.createCommandEncoder();
                 {
