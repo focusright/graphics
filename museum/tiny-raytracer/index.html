@@ -1,0 +1,52 @@
+<!-- https://www.gabrielgambetta.com/tiny-raytracer.html
+https://www.gabrielgambetta.com/tiny-raytracer-demo.html
+https://www.gabrielgambetta.com/tiny-raytracer-full.js -->
+<!DOCTYPE html>
+<html lang="" xml:lang="" xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta charset="utf-8"/>
+        <meta content="pandoc" name="generator"/>
+        <meta content="width=device-width, initial-scale=1.0, user-scalable=yes" name="viewport"/>
+        <title>Tiny Raytracer Demo - Gabriel Gambetta</title>
+        <style>
+            code{white-space: pre-wrap;}
+            span.smallcaps{font-variant: small-caps;}
+            span.underline{text-decoration: underline;}
+            div.column{display: inline-block; vertical-align: top; width: 50%;}
+            div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+            ul.task-list{list-style: none;}
+        </style>
+        <link href="style.css" rel="stylesheet"/>
+        <script src="jquery-3.2.1.min.js"></script>
+    </head>
+    <body>
+        <div class="main">
+            <div class="nav">
+                <a href="tiny-raytracer.html">&lt;&lt; Back</a> <a class="homelink" href="/index.html">Gabriel Gambetta</a>
+            </div>
+            <div style="clear:both;"></div>
+            <header id="title-block-header">
+                <h1 class="title">Tiny Raytracer Demo</h1>
+            </header>
+            <p>Press the button, and the rendered image will appear here after some time (from a few seconds up to some minutes, depending on your computer):</p>
+            <div>
+                <button class="centered" onclick="javascript:Render();">
+                Render
+                </button>
+            </div>
+            <div>
+                <canvas class="centered" id="c"></canvas>
+            </div>
+            <script language="Javascript">
+                //commented out this function since tiny-raytracer-full.js already does the job on page load
+                function Render() {
+                //var G=600,S=[G,[0,-G,0],9,9,0,G,2,1,[0,0,3],9,0,0,G,3,1,[-2,1,4],0,9,0,9,4,1,[2,1,4],0,0,9,G,5],a=2,L=[8,[2,2,0]],M=Math,Q=M.sqrt,X=M.max,o=0,C=document.getElementById("c"),Z=C.getContext("2d"),m=Z.getImageData(0,0,G,G),W=m.data,d=(A,B)=>A[0]*B[0]+A[1]*B[1]+A[2]*B[2],A=(A,B,k)=>[A[0]-B[0]*k,A[1]-B[1]*k,A[2]-B[2]*k],I=(O,D,m,M)=>{t=G;for(c=i=0;r=S[i++];i+=6)if(j=A(O,S[i],1),a=2*d(D,D),b=-2*d(j,D),k=Q(b*b-2*a*(d(j,j)-r*r)))for(e=2;e--;k=-k)f=(b-k)/a,m<f&&f<M&&f<t&&(c=i,t=f);return c},T=(O,D,m,r)=>{if(s=I(O,D,m,G)){N=A(P=A(O,D,-t),S[s],1);n=d(N,N);i=a;for(l=0;e=L[l++];)p=d(N,v=A(L[l++],P,1)),i+=e*!I(P,v,1/G,1)*(X(0,p/Q(d(v,v)*n))+X(0,M.pow(d(R=A(v,N,2*p/n),D)/Q(d(R,R)*d(D,D)),S[s+4])));O=S[s+H]*i*2.8;m=S[s+5]/9;return r--?(T(P,A(D,N,2*d(N,D)/n),1/G,r)|0)*m+O*(1-m):O}};C.width=C.height=G;for(y=h=G/2;y-->-h;)for(x=-h;x++<h;){for(H=0;4>++H;)W[o++]=T([0,1,0],[x/G,y/G,1],1,2);W[o++]=G}Z.putImageData(m,0,0);
+                }
+            </script>
+            <script src="tiny-raytracer-full.js"></script>
+            <div class="centered" id="message"></div>
+            <p><strong>You might also enjoy my book <a href="/computer-graphics-from-scratch">Computer Graphics From Scratch</a>.</strong></p>
+        </div>
+        <div class="copyright">© Gabriel Gambetta 2022</div>
+    </body>
+</html>
