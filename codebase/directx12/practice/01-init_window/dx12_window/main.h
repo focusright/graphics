@@ -29,7 +29,6 @@ UINT64 m_fenceValue;
 UINT m_width = 1280;
 UINT m_height = 720;
 float m_aspectRatio = static_cast<float>(m_width) / static_cast<float>(m_height);;
-bool m_useWarpDevice;
 static HWND m_hwnd;
 
 inline std::string HrToString(HRESULT hr) {
