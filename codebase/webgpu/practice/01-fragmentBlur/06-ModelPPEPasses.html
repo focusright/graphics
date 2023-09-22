@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
-        <title>Fragment Shader Blur More</title>
+        <title>Textured Cube + Fragment Shader Blur + Color Invert</title>
         <style>
             canvas {
                 max-width: 600px;
@@ -79,7 +79,7 @@
                 }
             `;
 
-            const fragblurWGSL = `
+            const fragBlurWGSL = `
                 @group(0) @binding(0) var gBufferAlbedo: texture_2d<f32>;
 
                 @fragment
@@ -99,6 +99,20 @@
                         result += textureLoad(gBufferAlbedo, vec2<i32>(i32(coord.x+x), i32(coord.y+y)), 0);
                     }
                     return (result / f32(squared));
+                }
+            `;
+
+            const fragInvertWGSL = `
+                @group(0) @binding(0) var gBufferAlbedo: texture_2d<f32>;
+
+                @fragment
+                fn main(
+                    @builtin(position) coord : vec4<f32>
+                ) -> @location(0) vec4<f32> {
+                    var result: vec4<f32>;
+                    result = textureLoad(gBufferAlbedo, vec2<i32>(i32(coord.x), i32(coord.y)), 0);
+                    result = vec4<f32>(1-result.x, 1-result.y, 1-result.z, result.w);
+                    return result ;
                 }
             `;
 
@@ -158,6 +172,11 @@
                 format: 'bgra8unorm',
             });
             const gBufferTexture2 = device.createTexture({
+                size: [canvas.width, canvas.height],
+                usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+                format: 'bgra8unorm',
+            });
+            const gBufferTexture3 = device.createTexture({
                 size: [canvas.width, canvas.height],
                 usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
                 format: 'bgra8unorm',
@@ -256,7 +275,7 @@
             });
 
 
-            const gBufferTexturesBindGroupLayout = device.createBindGroupLayout({
+            const gBuffer1BindGroupLayout = device.createBindGroupLayout({
                 entries: [
                     {
                         binding: 0,
@@ -267,8 +286,8 @@
                     },
                 ],
             });
-            const gBufferTexturesBindGroup = device.createBindGroup({
-                layout: gBufferTexturesBindGroupLayout,
+            const gBuffer1BindGroup = device.createBindGroup({
+                layout: gBuffer1BindGroupLayout,
                 entries: [
                     {
                         binding: 0,
@@ -276,9 +295,103 @@
                     },
                 ],
             });
-            const gBuffersViewPipeline = device.createRenderPipeline({
+            const blurPipeline = device.createRenderPipeline({
                 layout: device.createPipelineLayout({
-                    bindGroupLayouts: [gBufferTexturesBindGroupLayout],
+                    bindGroupLayouts: [gBuffer1BindGroupLayout],
+                }),
+                vertex: {
+                    module: device.createShaderModule({
+                        code: vertexTextureQuad,
+                    }),
+                    entryPoint: 'main',
+                },
+                fragment: {
+                    module: device.createShaderModule({
+                        code: fragBlurWGSL,
+                    }),
+                    entryPoint: 'main',
+                    targets: [
+                        {
+                            format: presentationFormat,
+                        },
+                    ],
+                },
+                primitive: {
+                    topology: 'triangle-list',
+                },
+            });
+
+
+            const gBuffer2BindGroupLayout = device.createBindGroupLayout({
+                entries: [
+                    {
+                        binding: 0,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        texture: {
+                            sampleType: 'unfilterable-float',
+                        },
+                    },
+                ],
+            });
+            const gBuffer2BindGroup = device.createBindGroup({
+                layout: gBuffer2BindGroupLayout,
+                entries: [
+                    {
+                        binding: 0,
+                        resource: gBufferTexture2.createView(),
+                    },
+                ],
+            });
+            const invertPipeline = device.createRenderPipeline({
+                layout: device.createPipelineLayout({
+                    bindGroupLayouts: [gBuffer2BindGroupLayout],
+                }),
+                vertex: {
+                    module: device.createShaderModule({
+                        code: vertexTextureQuad,
+                    }),
+                    entryPoint: 'main',
+                },
+                fragment: {
+                    module: device.createShaderModule({
+                        code: fragInvertWGSL,
+                    }),
+                    entryPoint: 'main',
+                    targets: [
+                        {
+                            format: presentationFormat,
+                        },
+                    ],
+                },
+                primitive: {
+                    topology: 'triangle-list',
+                },
+            });
+
+
+            const gBuffer3BindGroupLayout = device.createBindGroupLayout({
+                entries: [
+                    {
+                        binding: 0,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        texture: {
+                            sampleType: 'unfilterable-float',
+                        },
+                    },
+                ],
+            });
+            const gBuffer3BindGroup = device.createBindGroup({
+                layout: gBuffer2BindGroupLayout,
+                entries: [
+                    {
+                        binding: 0,
+                        resource: gBufferTexture3.createView(),
+                    },
+                ],
+            });
+            const RenderCanvasPipeline = device.createRenderPipeline({
+                layout: device.createPipelineLayout({
+                    bindGroupLayouts: [gBuffer3BindGroupLayout],
                 }),
                 vertex: {
                     module: device.createShaderModule({
@@ -307,54 +420,7 @@
             });
 
 
-            const blurBindGroupLayout = device.createBindGroupLayout({
-                entries: [
-                    {
-                        binding: 0,
-                        visibility: GPUShaderStage.FRAGMENT,
-                        texture: {
-                            sampleType: 'unfilterable-float',
-                        },
-                    },
-                ],
-            });
-            const blurBindGroup = device.createBindGroup({
-                layout: blurBindGroupLayout,
-                entries: [
-                    {
-                        binding: 0,
-                        resource: gBufferTexture2.createView(),
-                    },
-                ],
-            });
-            const blurPipeline = device.createRenderPipeline({
-                layout: device.createPipelineLayout({
-                    bindGroupLayouts: [blurBindGroupLayout],
-                }),
-                vertex: {
-                    module: device.createShaderModule({
-                        code: vertexTextureQuad,
-                    }),
-                    entryPoint: 'main',
-                },
-                fragment: {
-                    module: device.createShaderModule({
-                        code: fragblurWGSL,
-                    }),
-                    entryPoint: 'main',
-                    targets: [
-                        {
-                            format: presentationFormat,
-                        },
-                    ],
-                },
-                primitive: {
-                    topology: 'triangle-list',
-                },
-            });
-
-
-            const writeGBufferPassDescriptor = {
+            const drawPassDescriptor = {
                 colorAttachments: [
                     {
                         view: gBufferTexture1.createView(),
@@ -374,11 +440,25 @@
                     }
                 ],
             };
-            
+            const invertPassDescriptor = {
+                colorAttachments: [
+                    {
+                        view: gBufferTexture3.createView(),
+                        clearValue: { r: 0.0, g: 0.0, b: 1.0, a: 1.0 },
+                        loadOp: 'clear',
+                        storeOp: 'store',
+                    }
+                ],
+            };
+
+
+
+
+
             function frame() {
                 const commandEncoder = device.createCommandEncoder();
                 {
-                    const gBufferPass = commandEncoder.beginRenderPass(writeGBufferPassDescriptor);
+                    const gBufferPass = commandEncoder.beginRenderPass(drawPassDescriptor);
                     gBufferPass.setPipeline(imageQuadPipleline);
                     gBufferPass.setBindGroup(0, imageQuadBindGroup);
                     gBufferPass.draw(6, 1, 0, 0);
@@ -389,9 +469,16 @@
                 {
                     const blurPass = commandEncoder.beginRenderPass(blurPassDescriptor);
                     blurPass.setPipeline(blurPipeline);
-                    blurPass.setBindGroup(0, gBufferTexturesBindGroup);
+                    blurPass.setBindGroup(0, gBuffer1BindGroup);
                     blurPass.draw(6, 1, 0, 0);
                     blurPass.end();
+                }
+                {
+                    const invertPass = commandEncoder.beginRenderPass(invertPassDescriptor);
+                    invertPass.setPipeline(invertPipeline);
+                    invertPass.setBindGroup(0, gBuffer2BindGroup);
+                    invertPass.draw(6, 1, 0, 0);
+                    invertPass.end();
                 }
                 {
                     const renderPass = commandEncoder.beginRenderPass({
@@ -404,8 +491,8 @@
                             },
                         ],
                     });
-                    renderPass.setPipeline(gBuffersViewPipeline);
-                    renderPass.setBindGroup(0, blurBindGroup);
+                    renderPass.setPipeline(RenderCanvasPipeline);
+                    renderPass.setBindGroup(0, gBuffer3BindGroup);
                     renderPass.draw(6);
                     renderPass.end();
                 }
