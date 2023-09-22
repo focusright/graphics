@@ -19,43 +19,20 @@ UINT m_frameIndex;
 HANDLE m_fenceEvent;
 ComPtr<ID3D12Fence> m_fence;
 UINT64 m_fenceValue;
+
 UINT m_width = 1280;
 UINT m_height = 720;
 static HWND m_hwnd;
 
-void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, bool requestHighPerformanceAdapter = false) {
-    *ppAdapter = nullptr;
-    ComPtr<IDXGIAdapter1> adapter;
-    ComPtr<IDXGIFactory6> factory6;
-
-    if (SUCCEEDED(pFactory->QueryInterface(IID_PPV_ARGS(&factory6)))) {
-        for (UINT adapterIndex=0; SUCCEEDED(factory6->EnumAdapterByGpuPreference(adapterIndex, DXGI_GPU_PREFERENCE_UNSPECIFIED, IID_PPV_ARGS(&adapter))); ++adapterIndex) {
-            HRESULT result = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr);
-            if (SUCCEEDED(result)) { break; } else { continue; }
-        } //https://stackoverflow.com/a/4706225/452436
-    }
-    if (adapter.Get() == nullptr) {
-        for (UINT adapterIndex=0; SUCCEEDED(pFactory->EnumAdapters1(adapterIndex, &adapter)); ++adapterIndex) {
-            HRESULT result = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr);
-            if (SUCCEEDED(result)) { break; } else { continue; }
-        }
-    }
-    *ppAdapter = adapter.Detach();
-}
-
 void LoadPipeline() {
-    ComPtr<IDXGIFactory4> factory;
-    CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
-
     ComPtr<IDXGIAdapter1> hardwareAdapter;
-    GetHardwareAdapter(factory.Get(), &hardwareAdapter);
     D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
 
     D3D12_COMMAND_QUEUE_DESC queueDesc = {};
     queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
     m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue));
-    
+
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
     swapChainDesc.BufferCount = FRAMECOUNT;
     swapChainDesc.Width = m_width;
@@ -64,7 +41,10 @@ void LoadPipeline() {
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swapChainDesc.SampleDesc.Count = 1;
+
     ComPtr<IDXGISwapChain1> swapChain;
+    ComPtr<IDXGIFactory4> factory;
+    CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
     factory->CreateSwapChainForHwnd(m_commandQueue.Get(), m_hwnd, &swapChainDesc, nullptr, nullptr, &swapChain);
     factory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER);
     swapChain.As(&m_swapChain);
@@ -76,7 +56,7 @@ void LoadPipeline() {
     rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap));
     m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-    
+
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
     for (UINT n = 0; n < FRAMECOUNT; n++) {
         m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n]));
