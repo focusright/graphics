@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
             setcolor(rand() % 256);
             circle(rand() % 320, rand() % 200, rand() % 30);
         }
+        if( keystate( KEY_ESCAPE ) )  { break; }
     }
     return 0;
 }
