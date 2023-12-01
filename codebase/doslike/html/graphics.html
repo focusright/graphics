@@ -1,7 +1,14 @@
 <!doctype html>
 <html lang="en-us">
-<head><meta charset="utf-8"></head>
-<body style="background:#CCC">
+<head>
+    <meta charset="utf-8">
+    <script>
+        function toggleZoomScreen() { //https://stackoverflow.com/a/73350519/452436
+            document.body.style.zoom = (1 / window.devicePixelRatio);
+        }
+    </script>
+</head>
+<body onload="toggleZoomScreen()" onresize="toggleZoomScreen()" style="background:#CCC">
 <canvas id="wa_canvas" style="display:block;margin:0 auto" oncontextmenu="event.preventDefault()" height="0"></canvas>
 <div id="wa_log">Loading...<br><br></div>
 <script>"use strict";
