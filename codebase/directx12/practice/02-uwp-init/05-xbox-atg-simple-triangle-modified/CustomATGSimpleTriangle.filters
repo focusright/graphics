@@ -29,26 +29,26 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="SimpleTriangleUWP12.h" />
+    <ClInclude Include="CustomATGSimpleTriangle.h" />
     <ClInclude Include="StepTimer.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="DeviceResources.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Kits\ATGTK\d3dx12.h">
+    <ClInclude Include="..\..\..\libs\ATGTK\d3dx12.h">
       <Filter>ATG Tool Kit</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Kits\ATGTK\ReadData.h">
+    <ClInclude Include="..\..\..\libs\ATGTK\ReadData.h">
       <Filter>ATG Tool Kit</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Kits\ATGTK\ATGColors.h">
+    <ClInclude Include="..\..\..\libs\ATGTK\ATGColors.h">
       <Filter>ATG Tool Kit</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
-    <ClCompile Include="SimpleTriangleUWP12.cpp" />
+    <ClCompile Include="CustomATGSimpleTriangle.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="DeviceResources.cpp">
       <Filter>Common</Filter>
@@ -76,16 +76,16 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Readme.docx" />
-    <None Include="..\..\..\Kits\Telemetry\ARM\ATGTelemetryUWP.dll">
+    <None Include="..\..\..\libs\Telemetry\ARM\ATGTelemetryUWP.dll">
       <Filter>Common\Telemetry\ARM</Filter>
     </None>
-    <None Include="..\..\..\Kits\Telemetry\x64\ATGTelemetryUWP.dll">
+    <None Include="..\..\..\libs\Telemetry\x64\ATGTelemetryUWP.dll">
       <Filter>Common\Telemetry\x64</Filter>
     </None>
-    <None Include="..\..\..\Kits\Telemetry\Win32\ATGTelemetryUWP.dll">
+    <None Include="..\..\..\libs\Telemetry\Win32\ATGTelemetryUWP.dll">
       <Filter>Common\Telemetry\Win32</Filter>
     </None>
-    <None Include="..\..\..\Kits\Telemetry\ARM64\ATGTelemetryUWP.dll">
+    <None Include="..\..\..\libs\Telemetry\ARM64\ATGTelemetryUWP.dll">
       <Filter>Common\Telemetry\ARM64</Filter>
     </None>
   </ItemGroup>

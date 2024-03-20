@@ -8,7 +8,7 @@
 //--------------------------------------------------------------------------------------
 
 #include "pch.h"
-#include "SimpleTriangleUWP12.h"
+#include "CustomATGSimpleTriangle.h"
 
 #include <ppltasks.h>
 

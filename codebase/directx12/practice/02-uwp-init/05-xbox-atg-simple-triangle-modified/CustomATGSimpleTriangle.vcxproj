@@ -37,7 +37,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{930ecc6f-e823-4989-9fae-524452c6bf66}</ProjectGuid>
     <Keyword>DirectXApp</Keyword>
-    <RootNamespace>SimpleTriangleUWP12</RootNamespace>
+    <RootNamespace>CustomATGSimpleTriangle</RootNamespace>
     <DefaultLanguage>en-US</DefaultLanguage>
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
     <AppContainerApplication>true</AppContainerApplication>
@@ -128,12 +128,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <Link>
       <AdditionalDependencies>ATGTelemetryUWP.lib; d2d1.lib; d3d12.lib; dxgi.lib; dxguid.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\Kits\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm; $(VCInstallDir)\lib\arm</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\libs\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm; $(VCInstallDir)\lib\arm</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\Kits\DirectXTK12\Inc;..\..\..\Kits\ATGTK;..\..\..\Kits\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\libs\DirectXTK12\Inc;..\..\..\libs\ATGTK;..\..\..\libs\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -146,12 +146,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <Link>
       <AdditionalDependencies>ATGTelemetryUWP.lib; d2d1.lib; d3d12.lib; dxgi.lib; dxguid.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\Kits\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm; $(VCInstallDir)\lib\arm</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\libs\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm; $(VCInstallDir)\lib\arm</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\Kits\DirectXTK12\Inc;..\..\..\Kits\ATGTK;..\..\..\Kits\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\libs\DirectXTK12\Inc;..\..\..\libs\ATGTK;..\..\..\libs\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -164,12 +164,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <Link>
       <AdditionalDependencies>ATGTelemetryUWP.lib; d2d1.lib; d3d12.lib; dxgi.lib; dxguid.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\Kits\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm; $(VCInstallDir)\lib\arm</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\libs\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm; $(VCInstallDir)\lib\arm</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\Kits\DirectXTK12\Inc;..\..\..\Kits\ATGTK;..\..\..\Kits\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\libs\DirectXTK12\Inc;..\..\..\libs\ATGTK;..\..\..\libs\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -182,12 +182,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <Link>
       <AdditionalDependencies>ATGTelemetryUWP.lib; d2d1.lib; d3d12.lib; dxgi.lib; dxguid.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\Kits\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm; $(VCInstallDir)\lib\arm</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\libs\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm; $(VCInstallDir)\lib\arm</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\Kits\DirectXTK12\Inc;..\..\..\Kits\ATGTK;..\..\..\Kits\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\libs\DirectXTK12\Inc;..\..\..\libs\ATGTK;..\..\..\libs\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -200,12 +200,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Link>
       <AdditionalDependencies>ATGTelemetryUWP.lib; d2d1.lib; d3d12.lib; dxgi.lib; dxguid.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\Kits\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store; $(VCInstallDir)\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\libs\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store; $(VCInstallDir)\lib</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\Kits\DirectXTK12\Inc;..\..\..\Kits\ATGTK;..\..\..\Kits\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\libs\DirectXTK12\Inc;..\..\..\libs\ATGTK;..\..\..\libs\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -219,12 +219,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Link>
       <AdditionalDependencies>ATGTelemetryUWP.lib; d2d1.lib; d3d12.lib; dxgi.lib; dxguid.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\Kits\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store; $(VCInstallDir)\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\libs\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store; $(VCInstallDir)\lib</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\Kits\DirectXTK12\Inc;..\..\..\Kits\ATGTK;..\..\..\Kits\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\libs\DirectXTK12\Inc;..\..\..\libs\ATGTK;..\..\..\libs\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -238,12 +238,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Link>
       <AdditionalDependencies>ATGTelemetryUWP.lib; d2d1.lib; d3d12.lib; dxgi.lib; dxguid.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\Kits\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\amd64; $(VCInstallDir)\lib\amd64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\libs\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\amd64; $(VCInstallDir)\lib\amd64</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\Kits\DirectXTK12\Inc;..\..\..\Kits\ATGTK;..\..\..\Kits\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\libs\DirectXTK12\Inc;..\..\..\libs\ATGTK;..\..\..\libs\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -256,12 +256,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
       <AdditionalDependencies>ATGTelemetryUWP.lib; d2d1.lib; d3d12.lib; dxgi.lib; dxguid.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\Kits\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\amd64; $(VCInstallDir)\lib\amd64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\libs\Telemetry\$(Platform); %(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\amd64; $(VCInstallDir)\lib\amd64</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\Kits\DirectXTK12\Inc;..\..\..\Kits\ATGTK;..\..\..\Kits\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);..\..\..\libs\DirectXTK12\Inc;..\..\..\libs\ATGTK;..\..\..\libs\Telemetry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -272,16 +272,16 @@
     </FXCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\Kits\ATGTK\ATGColors.h" />
-    <ClInclude Include="..\..\..\Kits\ATGTK\d3dx12.h" />
-    <ClInclude Include="..\..\..\Kits\ATGTK\ReadData.h" />
-    <ClInclude Include="SimpleTriangleUWP12.h" />
+    <ClInclude Include="..\..\..\libs\ATGTK\ATGColors.h" />
+    <ClInclude Include="..\..\..\libs\ATGTK\d3dx12.h" />
+    <ClInclude Include="..\..\..\libs\ATGTK\ReadData.h" />
+    <ClInclude Include="CustomATGSimpleTriangle.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="StepTimer.h" />
     <ClInclude Include="DeviceResources.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SimpleTriangleUWP12.cpp" />
+    <ClCompile Include="CustomATGSimpleTriangle.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="pch.cpp">
@@ -309,28 +309,28 @@
     <Image Include="Assets\WideLogo.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\Kits\Telemetry\ARM\ATGTelemetryUWP.dll">
+    <None Include="..\..\..\libs\Telemetry\ARM\ATGTelemetryUWP.dll">
       <ExcludedFromBuild Condition="'$(Platform)'=='x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Platform)'=='Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Platform)'=='ARM64'">true</ExcludedFromBuild>
       <DeploymentContent Condition="'$(Platform)'=='ARM'">true</DeploymentContent>
       <Link>ATGTelemetryUWP.dll</Link>
     </None>
-    <None Include="..\..\..\Kits\Telemetry\ARM64\ATGTelemetryUWP.dll">
+    <None Include="..\..\..\libs\Telemetry\ARM64\ATGTelemetryUWP.dll">
       <ExcludedFromBuild Condition="'$(Platform)'=='x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Platform)'=='Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Platform)'=='ARM'">true</ExcludedFromBuild>
       <DeploymentContent Condition="'$(Platform)'=='ARM64'">true</DeploymentContent>
       <Link>ATGTelemetryUWP.dll</Link>
     </None>
-    <None Include="..\..\..\Kits\Telemetry\Win32\ATGTelemetryUWP.dll">
+    <None Include="..\..\..\libs\Telemetry\Win32\ATGTelemetryUWP.dll">
       <ExcludedFromBuild Condition="'$(Platform)'=='x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Platform)'=='ARM'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Platform)'=='ARM64'">true</ExcludedFromBuild>
       <DeploymentContent Condition="'$(Platform)'=='Win32'">true</DeploymentContent>
       <Link>ATGTelemetryUWP.dll</Link>
     </None>
-    <None Include="..\..\..\Kits\Telemetry\x64\ATGTelemetryUWP.dll">
+    <None Include="..\..\..\libs\Telemetry\x64\ATGTelemetryUWP.dll">
       <ExcludedFromBuild Condition="'$(Platform)'=='ARM'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Platform)'=='ARM64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Platform)'=='Win32'">true</ExcludedFromBuild>
@@ -377,7 +377,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Kits\DirectXTK12\DirectXTK_Windows10_2017.vcxproj">
+    <ProjectReference Include="..\..\..\libs\DirectXTK12\DirectXTK_Windows10_2022.vcxproj">
       <Project>{945b8f0e-ae5f-447c-933a-9d069532d3e4}</Project>
     </ProjectReference>
   </ItemGroup>
