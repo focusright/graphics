@@ -87,26 +87,32 @@ void Game::Render()
     //Sprite and Textures
     ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap() };
     commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
-    
+
     m_spriteBatch->Begin(commandList);
 
-    //Static sprite
+    float time = float(m_timer.GetTotalSeconds());
 
-    //m_spriteBatch->Begin(commandList);
+    //Static sprite
     //m_spriteBatch->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
     //    GetTextureSize(m_texture.Get()),
     //    m_screenPos, nullptr, Colors::White, 0.f, m_origin);
-    //m_spriteBatch->End();
 
-    //Rotating sprite
-    
-    float time = float(m_timer.GetTotalSeconds());
+    //Rotating a sprite
+    //m_spriteBatch->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
+    //    GetTextureSize(m_texture.Get()),
+    //    m_screenPos, nullptr, Colors::White, cosf(time) * 4.f, m_origin);
+
+    //Scaling a sprite
+    //m_spriteBatch->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
+    //    GetTextureSize(m_texture.Get()),
+    //    m_screenPos, nullptr, Colors::White, 0.f, m_origin, cosf(time) + 2.f);
+
+    //Tinting a sprite
     m_spriteBatch->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
         GetTextureSize(m_texture.Get()),
-        m_screenPos, nullptr, Colors::White, cosf(time) * 4.f, m_origin);
+        m_screenPos, nullptr, Colors::Green, 0.f, m_origin);
 
     m_spriteBatch->End();
-
 
     PIXEndEvent(commandList);
 
