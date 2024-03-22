@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Common">
+      <UniqueIdentifier>a926ed5a-01ff-4a55-9d99-51393854dfd0</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets">
+      <UniqueIdentifier>cddfaf35-f89f-4177-8e8d-789396abfbc6</UniqueIdentifier>
+      <Extensions>bmp;dds;fbx;gif;jpg;jpeg;tga;tiff;tif;png</Extensions>
+    </Filter>
+    <Filter Include="ATG Tool Kit">
+      <UniqueIdentifier>{21e20b80-f763-40ef-b7b9-3d1efb47da27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Telemetry">
+      <UniqueIdentifier>{580d4319-ed7d-486e-9876-7f6391563dfb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Telemetry\ARM">
+      <UniqueIdentifier>{a6c44173-5b5a-4e88-ac2a-122c891588b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Telemetry\Win32">
+      <UniqueIdentifier>{967c8377-5e95-4230-859c-8393bc1c49bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Telemetry\x64">
+      <UniqueIdentifier>{050fc416-810f-427e-b193-236956c488e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Telemetry\ARM64">
+      <UniqueIdentifier>{920c8015-bba1-4fa2-8386-0ec521395404}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="FiltersPreserved.h" />
+    <ClInclude Include="StepTimer.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="DeviceResources.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\libs\ATGTK\d3dx12.h">
+      <Filter>ATG Tool Kit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\libs\ATGTK\ReadData.h">
+      <Filter>ATG Tool Kit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\libs\ATGTK\ATGColors.h">
+      <Filter>ATG Tool Kit</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="FiltersPreserved.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="DeviceResources.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\Logo.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\SmallLogo.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\SplashScreen.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\StoreLogo.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\WideLogo.png">
+      <Filter>Assets</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Readme.docx" />
+    <None Include="..\..\..\libs\Telemetry\ARM\ATGTelemetryUWP.dll">
+      <Filter>Common\Telemetry\ARM</Filter>
+    </None>
+    <None Include="..\..\..\libs\Telemetry\x64\ATGTelemetryUWP.dll">
+      <Filter>Common\Telemetry\x64</Filter>
+    </None>
+    <None Include="..\..\..\libs\Telemetry\Win32\ATGTelemetryUWP.dll">
+      <Filter>Common\Telemetry\Win32</Filter>
+    </None>
+    <None Include="..\..\..\libs\Telemetry\ARM64\ATGTelemetryUWP.dll">
+      <Filter>Common\Telemetry\ARM64</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="PixelShader.hlsl">
+      <Filter>Assets</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShader.hlsl">
+      <Filter>Assets</Filter>
+    </FxCompile>
+  </ItemGroup>
+</Project>
