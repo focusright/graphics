@@ -85,7 +85,8 @@ void Game::Render()
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
     //Sprite and Textures
-    ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap() };
+    //ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap() }; //static, rotating, scaling, tinting a sprite
+    ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap(), m_states->Heap() }; //Tiling a sprite
     commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
 
     m_spriteBatch->Begin(commandList);
@@ -108,9 +109,14 @@ void Game::Render()
     //    m_screenPos, nullptr, Colors::White, 0.f, m_origin, cosf(time) + 2.f);
 
     //Tinting a sprite
+    //m_spriteBatch->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
+    //    GetTextureSize(m_texture.Get()),
+    //    m_screenPos, nullptr, Colors::Green, 0.f, m_origin);
+
+    //Tiling a sprite
     m_spriteBatch->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
         GetTextureSize(m_texture.Get()),
-        m_screenPos, nullptr, Colors::Green, 0.f, m_origin);
+        m_screenPos, &m_tileRect, Colors::White, 0.f, m_origin);
 
     m_spriteBatch->End();
 
@@ -224,8 +230,10 @@ void Game::CreateDeviceDependentResources()
     m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
 
     //Sprites and Textures
-    m_resourceDescriptors = std::make_unique<DescriptorHeap>(device,
-        Descriptors::Count);
+
+    m_states = std::make_unique<CommonStates>(device);
+
+    m_resourceDescriptors = std::make_unique<DescriptorHeap>(device, Descriptors::Count);
 
     ResourceUploadBatch resourceUpload(device);
 
@@ -246,14 +254,26 @@ void Game::CreateDeviceDependentResources()
         m_deviceResources->GetDepthBufferFormat());
 
     //SpriteBatchPipelineStateDescription pd(rtState, &CommonStates::NonPremultiplied); //cat.png
-    SpriteBatchPipelineStateDescription pd(rtState); //cat.dds
+    //SpriteBatchPipelineStateDescription pd(rtState); //cat.dds
+
+    //Tiling a sprite
+    auto sampler = m_states->LinearWrap();
+    SpriteBatchPipelineStateDescription pd(rtState, nullptr, nullptr, nullptr, &sampler);
 
     m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, pd);
 
     XMUINT2 catSize = GetTextureSize(m_texture.Get());
 
-    m_origin.x = float(catSize.x / 2);
-    m_origin.y = float(catSize.y / 2);
+    //m_origin.x = float(catSize.x / 2);
+    //m_origin.y = float(catSize.y / 2);
+
+    m_origin.x = float(catSize.x * 2); //Tiling a sprite
+    m_origin.y = float(catSize.y * 2);
+    
+    m_tileRect.left = catSize.x * 2;
+    m_tileRect.right = catSize.x * 6;
+    m_tileRect.top = catSize.y * 2;
+    m_tileRect.bottom = catSize.y * 6;
 
     auto uploadResourcesFinished = resourceUpload.End(
         m_deviceResources->GetCommandQueue());
@@ -283,6 +303,7 @@ void Game::OnDeviceLost()
     m_texture.Reset();
     m_resourceDescriptors.reset();
     m_spriteBatch.reset();
+    m_states.reset();
 }
 
 void Game::OnDeviceRestored()
