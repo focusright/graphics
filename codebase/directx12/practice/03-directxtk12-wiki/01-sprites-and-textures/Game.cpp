@@ -86,7 +86,7 @@ void Game::Render()
 
     //Sprite and Textures
     //ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap() }; //static, rotating, scaling, tinting a sprite
-    ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap(), m_states->Heap() }; //Tiling a sprite
+    ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap(), m_states->Heap() }; //Tiling a sprite, drawing a background image
     commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
 
     m_spriteBatch->Begin(commandList);
@@ -119,9 +119,17 @@ void Game::Render()
     //    m_screenPos, &m_tileRect, Colors::White, 0.f, m_origin);
 
     //Stretch a sprite
+    //m_spriteBatch->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
+    //    GetTextureSize(m_texture.Get()),
+    //    m_stretchRect, nullptr, Colors::White);
+
+    //Drawing a background image
+    m_spriteBatch->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::Background),
+        GetTextureSize(m_background.Get()),
+        m_fullscreenRect);
     m_spriteBatch->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
         GetTextureSize(m_texture.Get()),
-        m_stretchRect, nullptr, Colors::White);
+        m_screenPos, nullptr, Colors::White, 0.f, m_origin);
 
     m_spriteBatch->End();
 
@@ -251,9 +259,14 @@ void Game::CreateDeviceDependentResources()
     DX::ThrowIfFailed( //cat.dds
         CreateDDSTextureFromFile(device, resourceUpload, L"cat.dds",
             m_texture.ReleaseAndGetAddressOf()));
-
     CreateShaderResourceView(device, m_texture.Get(),
         m_resourceDescriptors->GetCpuHandle(Descriptors::Cat));
+
+    DX::ThrowIfFailed(//background sunset.jpg
+        CreateWICTextureFromFile(device, resourceUpload, L"sunset.jpg",
+            m_background.ReleaseAndGetAddressOf()));
+    CreateShaderResourceView(device, m_background.Get(),
+        m_resourceDescriptors->GetCpuHandle(Descriptors::Background));
 
     RenderTargetState rtState(m_deviceResources->GetBackBufferFormat(),
         m_deviceResources->GetDepthBufferFormat());
@@ -269,11 +282,11 @@ void Game::CreateDeviceDependentResources()
 
     XMUINT2 catSize = GetTextureSize(m_texture.Get());
 
-    //m_origin.x = float(catSize.x / 2);
-    //m_origin.y = float(catSize.y / 2);
+    m_origin.x = float(catSize.x / 2); //Original plus (and)
+    m_origin.y = float(catSize.y / 2); //drawing a background image
 
-    m_origin.x = float(catSize.x * 2); //Tiling a sprite
-    m_origin.y = float(catSize.y * 2);
+    //m_origin.x = float(catSize.x * 2); //Tiling a sprite
+    //m_origin.y = float(catSize.y * 2);
     
     m_tileRect.left = catSize.x * 2;
     m_tileRect.right = catSize.x * 6;
@@ -301,10 +314,12 @@ void Game::CreateWindowSizeDependentResources()
     m_stretchRect.top = size.bottom / 4;
     m_stretchRect.right = m_stretchRect.left + size.right / 2;
     m_stretchRect.bottom = m_stretchRect.top + size.bottom / 2;
+
+    //Drawing a background image
+    m_fullscreenRect = m_deviceResources->GetOutputSize();
 }
 
-void Game::OnDeviceLost()
-{
+void Game::OnDeviceLost() {
     // TODO: Add Direct3D resource cleanup here.
 
     // If using the DirectX Tool Kit for DX12, uncomment this line:
@@ -315,12 +330,11 @@ void Game::OnDeviceLost()
     m_resourceDescriptors.reset();
     m_spriteBatch.reset();
     m_states.reset();
+    m_background.Reset();
 }
 
-void Game::OnDeviceRestored()
-{
+void Game::OnDeviceRestored() {
     CreateDeviceDependentResources();
-
     CreateWindowSizeDependentResources();
 }
 #pragma endregion

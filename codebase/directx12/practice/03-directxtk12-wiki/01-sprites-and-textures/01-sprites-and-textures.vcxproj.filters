@@ -52,6 +52,9 @@
     <Image Include="cat.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="sunset.jpg">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />

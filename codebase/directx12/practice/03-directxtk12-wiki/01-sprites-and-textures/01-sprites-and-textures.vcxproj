@@ -374,6 +374,7 @@
     <Image Include="Assets\WideLogo.scale-200.png" />
     <Image Include="cat.dds" />
     <Image Include="cat.png" />
+    <Image Include="sunset.jpg" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

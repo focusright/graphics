@@ -70,6 +70,7 @@ private:
 
     enum Descriptors {
         Cat,
+        Background, //Drawing a background image
         Count
     };
 
@@ -84,4 +85,8 @@ private:
 
     //Stretching a sprite
     RECT m_stretchRect;
+
+    //Drawing a background image
+    RECT m_fullscreenRect;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_background;
 };
