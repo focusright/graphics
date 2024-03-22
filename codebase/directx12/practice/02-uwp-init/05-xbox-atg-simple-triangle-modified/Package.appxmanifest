@@ -31,7 +31,7 @@
   <Applications>
     <Application Id="App"
       Executable="$targetnametoken$.exe"
-      EntryPoint="SimpleTriangleUWP12.App">
+      EntryPoint="CustomATGSimpleTriangle.App">
       <uap:VisualElements
         DisplayName="CustomATGSimpleTriangle"
         Square150x150Logo="Assets\Logo.png"
