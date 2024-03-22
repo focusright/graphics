@@ -114,9 +114,14 @@ void Game::Render()
     //    m_screenPos, nullptr, Colors::Green, 0.f, m_origin);
 
     //Tiling a sprite
+    //m_spriteBatch->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
+    //    GetTextureSize(m_texture.Get()),
+    //    m_screenPos, &m_tileRect, Colors::White, 0.f, m_origin);
+
+    //Stretch a sprite
     m_spriteBatch->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
         GetTextureSize(m_texture.Get()),
-        m_screenPos, &m_tileRect, Colors::White, 0.f, m_origin);
+        m_stretchRect, nullptr, Colors::White);
 
     m_spriteBatch->End();
 
@@ -290,6 +295,12 @@ void Game::CreateWindowSizeDependentResources()
     auto size = m_deviceResources->GetOutputSize();
     m_screenPos.x = float(size.right) / 2.f;
     m_screenPos.y = float(size.bottom) / 2.f;
+
+    //Stretch a sprite
+    m_stretchRect.left = size.right / 4;
+    m_stretchRect.top = size.bottom / 4;
+    m_stretchRect.right = m_stretchRect.left + size.right / 2;
+    m_stretchRect.bottom = m_stretchRect.top + size.bottom / 2;
 }
 
 void Game::OnDeviceLost()
