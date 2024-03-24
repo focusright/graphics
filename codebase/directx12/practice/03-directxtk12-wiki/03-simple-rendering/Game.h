@@ -64,8 +64,19 @@ private:
     // If using the DirectX Tool Kit for DX12, uncomment this line:
     std::unique_ptr<DirectX::GraphicsMemory> m_graphicsMemory;
 
-    using VertexType = DirectX::VertexPositionColor;
+    using VertexType = DirectX::VertexPositionTexture;
 
     std::unique_ptr<DirectX::BasicEffect> m_effect;
     std::unique_ptr<DirectX::PrimitiveBatch<VertexType>> m_batch;
+
+    std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
+
+    enum Descriptors
+    {
+        Rocks,
+        Count
+    };
+
+    std::unique_ptr<DirectX::CommonStates> m_states;
 };

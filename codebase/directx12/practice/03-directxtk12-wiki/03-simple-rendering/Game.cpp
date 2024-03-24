@@ -86,13 +86,16 @@ void Game::Render()
 
     // TODO: Add your rendering code here.
 
+    ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap(), m_states->Heap() };
+    commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
+
     m_effect->Apply(commandList);
 
     m_batch->Begin(commandList);
 
-    VertexPositionColor v1(Vector3(400.f, 150.f, 0.f), Colors::Red);
-    VertexPositionColor v2(Vector3(600.f, 450.f, 0.f), Colors::Green);
-    VertexPositionColor v3(Vector3(200.f, 450.f, 0.f), Colors::Blue);
+    VertexPositionTexture v1(Vector3(400.f, 150.f, 0.f), Vector2(.5f, 0));
+    VertexPositionTexture v2(Vector3(600.f, 450.f, 0.f), Vector2(1, 1));
+    VertexPositionTexture v3(Vector3(200.f, 450.f, 0.f), Vector2(0, 1));
 
     m_batch->DrawTriangle(v1, v2, v3);
 
@@ -206,10 +209,11 @@ void Game::CreateDeviceDependentResources()
 
     // If using the DirectX Tool Kit for DX12, uncomment this line:
     m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
-
+    
     // TODO: Initialize device dependent objects here (independent of window size).
 
     m_batch = std::make_unique<PrimitiveBatch<VertexType>>(device);
+    m_states = std::make_unique<CommonStates>(device);
 
     RenderTargetState rtState(m_deviceResources->GetBackBufferFormat(),
         m_deviceResources->GetDepthBufferFormat());
@@ -221,7 +225,27 @@ void Game::CreateDeviceDependentResources()
         CommonStates::CullCounterClockwise,
         rtState);
 
-    m_effect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, pd);
+    m_resourceDescriptors = std::make_unique<DescriptorHeap>(device,
+        Descriptors::Count);
+
+    ResourceUploadBatch resourceUpload(device);
+
+    resourceUpload.Begin();
+
+    DX::ThrowIfFailed(
+        CreateWICTextureFromFile(device, resourceUpload, L"rocks.jpg",
+            m_texture.ReleaseAndGetAddressOf()));
+
+    CreateShaderResourceView(device, m_texture.Get(),
+        m_resourceDescriptors->GetCpuHandle(Descriptors::Rocks));
+
+    auto uploadResourcesFinished = resourceUpload.End(
+        m_deviceResources->GetCommandQueue());
+
+    uploadResourcesFinished.wait();
+
+    m_effect = std::make_unique<BasicEffect>(device, EffectFlags::Texture, pd);
+    m_effect->SetTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Rocks), m_states->LinearClamp());
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.
@@ -248,6 +272,8 @@ void Game::OnDeviceLost()
     m_graphicsMemory.reset();
     m_effect.reset();
     m_batch.reset();
+    m_texture.Reset();
+    m_resourceDescriptors.reset();
 }
 
 void Game::OnDeviceRestored()
