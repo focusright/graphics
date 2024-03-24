@@ -85,16 +85,16 @@ void Game::Render()
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
     // TODO: Add your rendering code here.
+    std::wstring output = std::wstring(L"Hello") + std::wstring(L" World");
+
     ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap() };
     commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
 
     m_spriteBatch->Begin(commandList);
 
-    const wchar_t* output = L"Hello World";
+    Vector2 origin = m_font->MeasureString(output.c_str()) / 2.f;
 
-    Vector2 origin = m_font->MeasureString(output) / 2.f;
-
-    m_font->DrawString(m_spriteBatch.get(), output,
+    m_font->DrawString(m_spriteBatch.get(), output.c_str(),
         m_fontPos, Colors::White, 0.f, origin);
 
     m_spriteBatch->End();
