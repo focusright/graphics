@@ -9,4 +9,4 @@
 <br>
 
 ### Additional Include Directories
-$(ProjectDir)..\..\..\libs\DirectXTK12\Inc
+$(ProjectDir)..\\..\\..\libs\DirectXTK12\Inc
