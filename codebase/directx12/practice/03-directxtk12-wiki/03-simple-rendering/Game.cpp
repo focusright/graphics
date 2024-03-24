@@ -90,9 +90,9 @@ void Game::Render()
 
     m_batch->Begin(commandList);
 
-    VertexPositionColor v1(Vector3(400.f, 150.f, 0.f), Colors::Yellow);
-    VertexPositionColor v2(Vector3(600.f, 450.f, 0.f), Colors::Yellow);
-    VertexPositionColor v3(Vector3(200.f, 450.f, 0.f), Colors::Yellow);
+    VertexPositionColor v1(Vector3(400.f, 150.f, 0.f), Colors::Red);
+    VertexPositionColor v2(Vector3(600.f, 450.f, 0.f), Colors::Green);
+    VertexPositionColor v3(Vector3(200.f, 450.f, 0.f), Colors::Blue);
 
     m_batch->DrawTriangle(v1, v2, v3);
 
@@ -218,7 +218,7 @@ void Game::CreateDeviceDependentResources()
         &VertexType::InputLayout,
         CommonStates::Opaque,
         CommonStates::DepthDefault,
-        CommonStates::CullNone,
+        CommonStates::CullCounterClockwise,
         rtState);
 
     m_effect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, pd);
