@@ -5,6 +5,8 @@ VisualStudioVersion = 17.9.34714.143
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "01-sprites-and-textures", "01-sprites-and-textures.vcxproj", "{AF48F96B-8FF6-45C5-9AD1-73BA8002A096}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DirectXTK12", "..\..\..\libs\DirectXTK12\DirectXTK_Windows10_2022.vcxproj", "{945B8F0E-AE5F-447C-933A-9D069532D3E4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM
@@ -41,6 +43,22 @@ Global
 		{AF48F96B-8FF6-45C5-9AD1-73BA8002A096}.Release|x86.ActiveCfg = Release|Win32
 		{AF48F96B-8FF6-45C5-9AD1-73BA8002A096}.Release|x86.Build.0 = Release|Win32
 		{AF48F96B-8FF6-45C5-9AD1-73BA8002A096}.Release|x86.Deploy.0 = Release|Win32
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Debug|ARM.ActiveCfg = Debug|x64
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Debug|ARM.Build.0 = Debug|x64
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Debug|ARM64.Build.0 = Debug|ARM64
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Debug|x64.ActiveCfg = Debug|x64
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Debug|x64.Build.0 = Debug|x64
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Debug|x86.ActiveCfg = Debug|Win32
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Debug|x86.Build.0 = Debug|Win32
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Release|ARM.ActiveCfg = Release|x64
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Release|ARM.Build.0 = Release|x64
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Release|ARM64.ActiveCfg = Release|ARM64
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Release|ARM64.Build.0 = Release|ARM64
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Release|x64.ActiveCfg = Release|x64
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Release|x64.Build.0 = Release|x64
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Release|x86.ActiveCfg = Release|Win32
+		{945B8F0E-AE5F-447C-933A-9D069532D3E4}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

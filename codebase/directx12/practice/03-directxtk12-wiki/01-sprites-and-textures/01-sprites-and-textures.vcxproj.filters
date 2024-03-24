@@ -61,6 +61,5 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="01-sprites-and-textures_TemporaryKey.pfx" />
-    <None Include="packages.config" />
   </ItemGroup>
 </Project>
