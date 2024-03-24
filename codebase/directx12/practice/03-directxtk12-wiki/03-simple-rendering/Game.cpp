@@ -90,9 +90,9 @@ void Game::Render()
 
     m_batch->Begin(commandList);
 
-    VertexPositionColor v1(Vector3(0.f, 0.5f, 0.5f), Colors::Yellow);
-    VertexPositionColor v2(Vector3(0.5f, -0.5f, 0.5f), Colors::Yellow);
-    VertexPositionColor v3(Vector3(-0.5f, -0.5f, 0.5f), Colors::Yellow);
+    VertexPositionColor v1(Vector3(400.f, 150.f, 0.f), Colors::Yellow);
+    VertexPositionColor v2(Vector3(600.f, 450.f, 0.f), Colors::Yellow);
+    VertexPositionColor v3(Vector3(200.f, 450.f, 0.f), Colors::Yellow);
 
     m_batch->DrawTriangle(v1, v2, v3);
 
@@ -228,6 +228,16 @@ void Game::CreateDeviceDependentResources()
 void Game::CreateWindowSizeDependentResources()
 {
     // TODO: Initialize windows-size dependent objects here.
+
+    auto size = m_deviceResources->GetOutputSize();
+
+    Matrix proj = Matrix::CreateScale(2.f / float(size.right),
+        -2.f / float(size.bottom), 1.f)
+        * Matrix::CreateTranslation(-1.f, 1.f, 0.f);
+    m_effect->SetProjection(proj);
+
+    //The projection matrix can also be created with
+    //Matrix::CreateOrthographicOffCenter(0.f, float(size.right), float(size.bottom), 0.f, 0.f, 1.f);
 }
 
 void Game::OnDeviceLost()
