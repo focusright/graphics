@@ -85,7 +85,9 @@ void Game::Render()
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
     // TODO: Add your rendering code here.
-    std::wstring output = std::wstring(L"Hello") + std::wstring(L" World");
+    const char* ascii = "Hello World";
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    std::wstring output = converter.from_bytes(ascii);
 
     ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap() };
     commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
