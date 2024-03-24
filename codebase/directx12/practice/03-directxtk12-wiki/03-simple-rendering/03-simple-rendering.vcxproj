@@ -372,6 +372,7 @@
     <Image Include="Assets\StoreLogo.png" />
     <Image Include="Assets\WideLogo.scale-200.png" />
     <Image Include="rocks.jpg" />
+    <Image Include="rocks_normalmap.dds" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\libs\DirectXTK12\DirectXTK_Windows10_2022.vcxproj">

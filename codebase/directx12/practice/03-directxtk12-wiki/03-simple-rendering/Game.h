@@ -64,9 +64,9 @@ private:
     // If using the DirectX Tool Kit for DX12, uncomment this line:
     std::unique_ptr<DirectX::GraphicsMemory> m_graphicsMemory;
 
-    using VertexType = DirectX::VertexPositionTexture;
+    using VertexType = DirectX::VertexPositionNormalTexture;
 
-    std::unique_ptr<DirectX::BasicEffect> m_effect;
+    std::unique_ptr<DirectX::NormalMapEffect> m_effect;
     std::unique_ptr<DirectX::PrimitiveBatch<VertexType>> m_batch;
 
     std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
@@ -75,8 +75,11 @@ private:
     enum Descriptors
     {
         Rocks,
+        NormalMap,
         Count
     };
 
     std::unique_ptr<DirectX::CommonStates> m_states;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_normalMap;
 };
