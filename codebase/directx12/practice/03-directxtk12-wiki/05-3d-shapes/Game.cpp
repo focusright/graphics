@@ -220,7 +220,13 @@ void Game::CreateDeviceDependentResources()
     m_effect = std::make_unique<BasicEffect>(device, EffectFlags::Lighting, pd);
     m_effect->EnableDefaultLighting();
 
-    m_shape = GeometricPrimitive::CreateSphere();
+    //m_shape = GeometricPrimitive::CreateSphere();
+    //m_shape = GeometricPrimitive::CreateTorus();
+    //m_shape = GeometricPrimitive::CreateCube();
+    //m_shape = GeometricPrimitive::CreateCone();
+    //m_shape = GeometricPrimitive::CreateCylinder();
+    //m_shape = GeometricPrimitive::CreateDodecahedron();
+    m_shape = GeometricPrimitive::CreateTeapot();
 
     m_world = Matrix::Identity;
 }
