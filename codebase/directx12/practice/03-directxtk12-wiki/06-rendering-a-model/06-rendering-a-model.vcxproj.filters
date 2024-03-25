@@ -54,7 +54,7 @@
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="05-rendering-a-model_TemporaryKey.pfx" />
+    <None Include="06-rendering-a-model_TemporaryKey.pfx" />
     <None Include="cup.sdkmesh" />
   </ItemGroup>
 </Project>

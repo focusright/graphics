@@ -14,7 +14,7 @@
   <mp:PhoneIdentity PhoneProductId="d39cc35e-4ced-459c-a848-7aea54c586b6" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>05-rendering-a-model</DisplayName>
+    <DisplayName>06-rendering-a-model</DisplayName>
     <PublisherDisplayName>Mike Lee</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -30,12 +30,12 @@
   <Applications>
     <Application Id="App"
       Executable="$targetnametoken$.exe"
-      EntryPoint="_05_rendering_a_model.App">
+      EntryPoint="_06_rendering_a_model.App">
       <uap:VisualElements
-        DisplayName="05-rendering-a-model"
+        DisplayName="06-rendering-a-model"
         Square150x150Logo="Assets\Logo.png"
         Square44x44Logo="Assets\SmallLogo.png"
-        Description="05-rendering-a-model"
+        Description="06-rendering-a-model"
         BackgroundColor="transparent">
         <uap:DefaultTile Wide310x150Logo="Assets\WideLogo.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />

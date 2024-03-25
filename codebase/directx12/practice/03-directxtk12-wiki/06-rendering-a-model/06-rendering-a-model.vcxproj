@@ -37,7 +37,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{02a9aebb-3a9b-45f5-be95-4830294e1dc2}</ProjectGuid>
     <Keyword>DirectXApp</Keyword>
-    <RootNamespace>_05_rendering_a_model</RootNamespace>
+    <RootNamespace>_06_rendering_a_model</RootNamespace>
     <DefaultLanguage>en-US</DefaultLanguage>
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
     <AppContainerApplication>true</AppContainerApplication>
@@ -131,7 +131,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <PackageCertificateKeyFile>05-rendering-a-model_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <PackageCertificateKeyFile>06-rendering-a-model_TemporaryKey.pfx</PackageCertificateKeyFile>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <Link>
@@ -371,7 +371,7 @@
     <AppxManifest Include="Package.appxmanifest">
       <SubType>Designer</SubType>
     </AppxManifest>
-    <None Include="05-rendering-a-model_TemporaryKey.pfx" />
+    <None Include="06-rendering-a-model_TemporaryKey.pfx" />
     <None Include="cup.sdkmesh">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>
