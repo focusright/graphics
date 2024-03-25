@@ -240,7 +240,14 @@ void Game::CreateDeviceDependentResources()
         CommonStates::CullClockwise,
         rtState);
 
-    m_modelNormal = m_model->CreateEffects(*m_fxFactory, pd, pd);
+    EffectPipelineStateDescription pdAlpha(
+        nullptr,
+        CommonStates::NonPremultiplied,
+        CommonStates::DepthDefault,
+        CommonStates::CullClockwise,
+        rtState);
+
+    m_modelNormal = m_model->CreateEffects(*m_fxFactory, pd, pdAlpha);
 
     m_world = Matrix::Identity;
 }
