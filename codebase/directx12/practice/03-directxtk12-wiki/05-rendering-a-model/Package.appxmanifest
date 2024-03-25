@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  IgnorableNamespaces="uap mp">
+
+  <Identity
+    Name="d39cc35e-4ced-459c-a848-7aea54c586b6"
+    Publisher="CN=Mike Lee"
+    Version="1.0.0.0" />
+
+  <mp:PhoneIdentity PhoneProductId="d39cc35e-4ced-459c-a848-7aea54c586b6" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+
+  <Properties>
+    <DisplayName>05-rendering-a-model</DisplayName>
+    <PublisherDisplayName>Mike Lee</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.0.0" MaxVersionTested="10.0.0.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="x-generate"/>
+  </Resources>
+
+  <Applications>
+    <Application Id="App"
+      Executable="$targetnametoken$.exe"
+      EntryPoint="_05_rendering_a_model.App">
+      <uap:VisualElements
+        DisplayName="05-rendering-a-model"
+        Square150x150Logo="Assets\Logo.png"
+        Square44x44Logo="Assets\SmallLogo.png"
+        Description="05-rendering-a-model"
+        BackgroundColor="transparent">
+        <uap:DefaultTile Wide310x150Logo="Assets\WideLogo.png"/>
+        <uap:SplashScreen Image="Assets\SplashScreen.png" />
+      </uap:VisualElements>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <Capability Name="internetClient" />
+  </Capabilities>
+</Package>
