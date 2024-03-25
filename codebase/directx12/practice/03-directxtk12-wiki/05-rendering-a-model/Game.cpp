@@ -93,9 +93,11 @@ void Game::Render()
     ID3D12DescriptorHeap* heaps[] = { m_modelResources->Heap(), m_states->Heap() };
     commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
 
-    Model::UpdateEffectMatrices(m_modelNormal, m_world, m_view, m_proj);
+    //Model::UpdateEffectMatrices(m_modelNormal, m_world, m_view, m_proj);
+    //m_model->Draw(commandList, m_modelNormal.cbegin());
 
-    m_model->Draw(commandList, m_modelNormal.cbegin());
+    Model::UpdateEffectMatrices(m_modelWireframe, m_world, m_view, m_proj);
+    m_model->Draw(commandList, m_modelWireframe.cbegin());
 
     PIXEndEvent(commandList);
 
@@ -247,6 +249,15 @@ void Game::CreateDeviceDependentResources()
         CommonStates::CullClockwise,
         rtState);
 
+    EffectPipelineStateDescription pdWire(
+        nullptr,
+        CommonStates::Opaque,
+        CommonStates::DepthDefault,
+        CommonStates::Wireframe,
+        rtState);
+
+    m_modelWireframe = m_model->CreateEffects(*m_fxFactory, pdWire, pdWire);
+
     m_modelNormal = m_model->CreateEffects(*m_fxFactory, pd, pdAlpha);
 
     m_world = Matrix::Identity;
@@ -276,6 +287,7 @@ void Game::OnDeviceLost()
     m_modelResources.reset();
     m_model.reset();
     m_modelNormal.clear();
+    m_modelWireframe.clear();
 }
 
 void Game::OnDeviceRestored()
