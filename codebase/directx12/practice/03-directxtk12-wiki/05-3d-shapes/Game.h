@@ -71,4 +71,14 @@ private:
     std::unique_ptr<DirectX::GeometricPrimitive> m_shape;
 
     std::unique_ptr<DirectX::BasicEffect> m_effect;
+
+    std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
+    std::unique_ptr<DirectX::CommonStates> m_states;
+
+    enum Descriptors
+    {
+        Earth,
+        Count
+    };
 };

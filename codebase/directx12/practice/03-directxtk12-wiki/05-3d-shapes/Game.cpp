@@ -64,7 +64,7 @@ void Game::Update(DX::StepTimer const& timer)
     elapsedTime;
 
     auto time = static_cast<float>(timer.GetTotalSeconds());
-    m_world = Matrix::CreateRotationZ(cosf(time) * 2.f);
+    m_world = Matrix::CreateRotationY(time);
 
     PIXEndEvent();
 }
@@ -88,6 +88,9 @@ void Game::Render()
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
     // TODO: Add your rendering code here.
+
+    ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap(), m_states->Heap() };
+    commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
 
     m_effect->SetWorld(m_world);
     m_effect->Apply(commandList);
@@ -207,6 +210,27 @@ void Game::CreateDeviceDependentResources()
 
     // TODO: Initialize device dependent objects here (independent of window size).
 
+    m_resourceDescriptors = std::make_unique<DescriptorHeap>(device,
+        Descriptors::Count);
+
+    m_states = std::make_unique<CommonStates>(device);
+
+    ResourceUploadBatch resourceUpload(device);
+
+    resourceUpload.Begin();
+
+    DX::ThrowIfFailed(
+        CreateWICTextureFromFile(device, resourceUpload, L"earth.bmp",
+            m_texture.ReleaseAndGetAddressOf(), false));
+
+    CreateShaderResourceView(device, m_texture.Get(),
+        m_resourceDescriptors->GetCpuHandle(Descriptors::Earth));
+
+    auto uploadResourcesFinished = resourceUpload.End(
+        m_deviceResources->GetCommandQueue());
+
+    uploadResourcesFinished.wait();
+
     RenderTargetState rtState(m_deviceResources->GetBackBufferFormat(),
         m_deviceResources->GetDepthBufferFormat());
 
@@ -217,16 +241,13 @@ void Game::CreateDeviceDependentResources()
         CommonStates::CullNone,
         rtState);
 
-    m_effect = std::make_unique<BasicEffect>(device, EffectFlags::Lighting, pd);
+    m_effect = std::make_unique<BasicEffect>(device,
+        EffectFlags::Lighting | EffectFlags::Texture, pd);
     m_effect->EnableDefaultLighting();
+    m_effect->SetTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Earth),
+        m_states->AnisotropicWrap());
 
-    //m_shape = GeometricPrimitive::CreateSphere();
-    //m_shape = GeometricPrimitive::CreateTorus();
-    //m_shape = GeometricPrimitive::CreateCube();
-    //m_shape = GeometricPrimitive::CreateCone();
-    //m_shape = GeometricPrimitive::CreateCylinder();
-    //m_shape = GeometricPrimitive::CreateDodecahedron();
-    m_shape = GeometricPrimitive::CreateTeapot();
+    m_shape = GeometricPrimitive::CreateSphere();
 
     m_world = Matrix::Identity;
 }
@@ -255,6 +276,9 @@ void Game::OnDeviceLost()
     m_graphicsMemory.reset();
     m_shape.reset();
     m_effect.reset();
+    m_texture.Reset();
+    m_states.reset();
+    m_resourceDescriptors.reset();
 }
 
 void Game::OnDeviceRestored()

@@ -371,6 +371,7 @@
     <Image Include="Assets\SplashScreen.scale-200.png" />
     <Image Include="Assets\StoreLogo.png" />
     <Image Include="Assets\WideLogo.scale-200.png" />
+    <Image Include="earth.bmp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\libs\DirectXTK12\DirectXTK_Windows10_2022.vcxproj">
