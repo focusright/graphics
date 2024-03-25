@@ -226,11 +226,6 @@ void Game::CreateDeviceDependentResources()
     CreateShaderResourceView(device, m_texture.Get(),
         m_resourceDescriptors->GetCpuHandle(Descriptors::Earth));
 
-    auto uploadResourcesFinished = resourceUpload.End(
-        m_deviceResources->GetCommandQueue());
-
-    uploadResourcesFinished.wait();
-
     RenderTargetState rtState(m_deviceResources->GetBackBufferFormat(),
         m_deviceResources->GetDepthBufferFormat());
 
@@ -252,6 +247,13 @@ void Game::CreateDeviceDependentResources()
     m_shape = GeometricPrimitive::CreateSphere();
 
     m_world = Matrix::Identity;
+
+    m_shape->LoadStaticBuffers(device, resourceUpload);
+
+    auto uploadResourcesFinished = resourceUpload.End(
+        m_deviceResources->GetCommandQueue());
+
+    uploadResourcesFinished.wait();
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.
