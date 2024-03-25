@@ -219,6 +219,8 @@ void Game::CreateDeviceDependentResources()
 
     resourceUpload.Begin();
 
+    m_model->LoadStaticBuffers(device, resourceUpload);
+
     m_modelResources = m_model->LoadTextures(device, resourceUpload);
 
     m_fxFactory = std::make_unique<EffectFactory>(m_modelResources->Heap(), m_states->Heap());
