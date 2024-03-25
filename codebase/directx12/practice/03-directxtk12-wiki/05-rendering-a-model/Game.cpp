@@ -96,8 +96,11 @@ void Game::Render()
     //Model::UpdateEffectMatrices(m_modelNormal, m_world, m_view, m_proj);
     //m_model->Draw(commandList, m_modelNormal.cbegin());
 
-    Model::UpdateEffectMatrices(m_modelWireframe, m_world, m_view, m_proj);
-    m_model->Draw(commandList, m_modelWireframe.cbegin());
+    //Model::UpdateEffectMatrices(m_modelWireframe, m_world, m_view, m_proj);
+    //m_model->Draw(commandList, m_modelWireframe.cbegin());
+
+    Model::UpdateEffectMatrices(m_modelFog, m_world, m_view, m_proj);
+    m_model->Draw(commandList, m_modelFog.cbegin());
 
     PIXEndEvent(commandList);
 
@@ -261,6 +264,30 @@ void Game::CreateDeviceDependentResources()
     m_modelNormal = m_model->CreateEffects(*m_fxFactory, pd, pdAlpha);
 
     m_world = Matrix::Identity;
+
+    m_fxFactory->EnableFogging(true);
+    m_fxFactory->EnablePerPixelLighting(true);
+    m_modelFog = m_model->CreateEffects(*m_fxFactory, pd, pd);
+
+    for (auto& effect : m_modelFog)
+    {
+        auto lights = dynamic_cast<IEffectLights*>(effect.get());
+        if (lights)
+        {
+            lights->SetLightEnabled(0, true);
+            lights->SetLightDiffuseColor(0, Colors::Gold);
+            lights->SetLightEnabled(1, false);
+            lights->SetLightEnabled(2, false);
+        }
+
+        auto fog = dynamic_cast<IEffectFog*>(effect.get());
+        if (fog)
+        {
+            fog->SetFogColor(Colors::CornflowerBlue);
+            fog->SetFogStart(3.f);
+            fog->SetFogEnd(4.f);
+        }
+    }
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.
@@ -288,6 +315,7 @@ void Game::OnDeviceLost()
     m_model.reset();
     m_modelNormal.clear();
     m_modelWireframe.clear();
+    m_modelFog.clear();
 }
 
 void Game::OnDeviceRestored()

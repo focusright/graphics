@@ -75,4 +75,6 @@ private:
     DirectX::Model::EffectCollection m_modelNormal;
 
     DirectX::Model::EffectCollection m_modelWireframe;
+
+    DirectX::Model::EffectCollection m_modelFog;
 };
