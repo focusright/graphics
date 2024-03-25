@@ -242,8 +242,10 @@ void Game::CreateDeviceDependentResources()
         rtState);
 
     m_effect = std::make_unique<BasicEffect>(device,
-        EffectFlags::Lighting | EffectFlags::Texture, pd);
-    m_effect->EnableDefaultLighting();
+        EffectFlags::PerPixelLighting | EffectFlags::Texture, pd);
+    m_effect->SetLightEnabled(0, true);
+    m_effect->SetLightDiffuseColor(0, Colors::White);
+    m_effect->SetLightDirection(0, -Vector3::UnitZ);
     m_effect->SetTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Earth),
         m_states->AnisotropicWrap());
 
