@@ -89,12 +89,18 @@ void Game::Render()
 
     // TODO: Add your rendering code here.
 
+    size_t nbones = m_model->bones.size();
+
+    m_model->CopyAbsoluteBoneTransforms(nbones, m_animBones.get(), m_drawBones.get());
+
     ID3D12DescriptorHeap* heaps[] = { m_modelResources->Heap(), m_states->Heap() };
     commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
 
     Model::UpdateEffectMatrices(m_modelNormal, m_world, m_view, m_proj);
-    m_model->Draw(commandList, m_modelNormal.cbegin());
 
+    //m_model->Draw(commandList, m_modelNormal.cbegin());
+    m_model->Draw(commandList, nbones, m_drawBones.get(), m_world, m_modelNormal.cbegin());
+    
     PIXEndEvent(commandList);
 
 
@@ -213,6 +219,19 @@ void Game::CreateDeviceDependentResources()
 
     m_model = Model::CreateFromSDKMESH(device, L"tank.sdkmesh",
         ModelLoader_IncludeBones);
+
+    const size_t nbones = m_model->bones.size();
+    m_drawBones = ModelBone::MakeArray(nbones);
+    m_animBones = ModelBone::MakeArray(nbones);
+    uint32_t index = 0;
+    for (const auto& it : m_model->bones) {
+        if (_wcsicmp(it.name.c_str(), L"tank_geo") == 0) {
+            // Need to recenter the model.
+            m_animBones[index] = XMMatrixIdentity();
+        }
+        ++index;
+    }
+    m_model->CopyBoneTransformsTo(nbones, m_animBones.get());
 
     ResourceUploadBatch resourceUpload(device);
 
