@@ -12,13 +12,18 @@ using namespace DirectX::SimpleMath;
 
 using Microsoft::WRL::ComPtr;
 
-Game::Game() noexcept(false)
+Game::Game() noexcept(false) :
+    m_leftBackWheelBone(ModelBone::c_Invalid),
+    m_rightBackWheelBone(ModelBone::c_Invalid),
+    m_leftFrontWheelBone(ModelBone::c_Invalid),
+    m_rightFrontWheelBone(ModelBone::c_Invalid),
+    m_leftSteerBone(ModelBone::c_Invalid),
+    m_rightSteerBone(ModelBone::c_Invalid),
+    m_turretBone(ModelBone::c_Invalid),
+    m_cannonBone(ModelBone::c_Invalid),
+    m_hatchBone(ModelBone::c_Invalid)
 {
     m_deviceResources = std::make_unique<DX::DeviceResources>();
-    // TODO: Provide parameters for swapchain format, depth/stencil format, and backbuffer count.
-    //   Add DX::DeviceResources::c_AllowTearing to opt-in to variable rate displays.
-    //   Add DX::DeviceResources::c_EnableHDR for HDR10 display.
-    //   Add DX::DeviceResources::c_ReverseDepth to optimize depth buffer clears for 0 instead of 1.
     m_deviceResources->RegisterDeviceNotify(this);
 }
 
@@ -65,6 +70,40 @@ void Game::Update(DX::StepTimer const& timer)
 
     float time = float(timer.GetTotalSeconds());
     m_world = XMMatrixRotationY(time * 0.1f);
+
+    float wheelRotation = time * 5.f;
+    float steerRotation = sinf(time * 0.75f) * 0.5f;
+    float turretRotation = sinf(time * 0.333f) * 1.25f;
+    float cannonRotation = sinf(time * 0.25f) * 0.333f - 0.333f;
+    float hatchRotation = std::min(0.f, std::max(sinf(time * 2.f) * 2.f, -1.f));
+
+    XMMATRIX mat = XMMatrixRotationX(wheelRotation);
+    m_animBones[m_leftFrontWheelBone] = XMMatrixMultiply(mat,
+        m_model->boneMatrices[m_leftFrontWheelBone]);
+    m_animBones[m_rightFrontWheelBone] = XMMatrixMultiply(mat,
+        m_model->boneMatrices[m_rightFrontWheelBone]);
+    m_animBones[m_leftBackWheelBone] = XMMatrixMultiply(mat,
+        m_model->boneMatrices[m_leftBackWheelBone]);
+    m_animBones[m_rightBackWheelBone] = XMMatrixMultiply(mat,
+        m_model->boneMatrices[m_rightBackWheelBone]);
+
+    mat = XMMatrixRotationX(steerRotation);
+    m_animBones[m_leftSteerBone] = XMMatrixMultiply(mat,
+        m_model->boneMatrices[m_leftSteerBone]);
+    m_animBones[m_rightSteerBone] = XMMatrixMultiply(mat,
+        m_model->boneMatrices[m_rightSteerBone]);
+
+    mat = XMMatrixRotationY(turretRotation);
+    m_animBones[m_turretBone] = XMMatrixMultiply(mat,
+        m_model->boneMatrices[m_turretBone]);
+
+    mat = XMMatrixRotationX(cannonRotation);
+    m_animBones[m_cannonBone] = XMMatrixMultiply(mat,
+        m_model->boneMatrices[m_cannonBone]);
+
+    mat = XMMatrixRotationX(hatchRotation);
+    m_animBones[m_hatchBone] = XMMatrixMultiply(mat,
+        m_model->boneMatrices[m_hatchBone]);
 
     PIXEndEvent();
 }
@@ -224,13 +263,26 @@ void Game::CreateDeviceDependentResources()
     m_animBones = ModelBone::MakeArray(nbones);
 
     uint32_t index = 0;
-    for (const auto& it : m_model->bones) {
-        if (_wcsicmp(it.name.c_str(), L"tank_geo") == 0) {
+    for (const auto& it : m_model->bones)
+    {
+        if (_wcsicmp(it.name.c_str(), L"tank_geo") == 0)
+        {
             // Need to recenter the model.
             m_animBones[index] = XMMatrixIdentity();
         }
+        else if (_wcsicmp(it.name.c_str(), L"l_back_wheel_geo") == 0) { m_leftBackWheelBone = index; }
+        else if (_wcsicmp(it.name.c_str(), L"r_back_wheel_geo") == 0) { m_rightBackWheelBone = index; }
+        else if (_wcsicmp(it.name.c_str(), L"l_front_wheel_geo") == 0) { m_leftFrontWheelBone = index; }
+        else if (_wcsicmp(it.name.c_str(), L"r_front_wheel_geo") == 0) { m_rightFrontWheelBone = index; }
+        else if (_wcsicmp(it.name.c_str(), L"l_steer_geo") == 0) { m_leftSteerBone = index; }
+        else if (_wcsicmp(it.name.c_str(), L"r_steer_geo") == 0) { m_rightSteerBone = index; }
+        else if (_wcsicmp(it.name.c_str(), L"turret_geo") == 0) { m_turretBone = index; }
+        else if (_wcsicmp(it.name.c_str(), L"canon_geo") == 0) { m_cannonBone = index; }
+        else if (_wcsicmp(it.name.c_str(), L"hatch_geo") == 0) { m_hatchBone = index; }
+
         ++index;
     }
+
     m_model->CopyBoneTransformsTo(nbones, m_animBones.get());
 
     ResourceUploadBatch resourceUpload(device);
