@@ -46,9 +46,9 @@ void Game::Initialize(::IUnknown* window, int width, int height, DXGI_MODE_ROTAT
 void Game::Tick()
 {
     m_timer.Tick([&]()
-    {
-        Update(m_timer);
-    });
+        {
+            Update(m_timer);
+        });
 
     Render();
 }
@@ -100,7 +100,7 @@ void Game::Render()
 
     //m_model->Draw(commandList, m_modelNormal.cbegin());
     m_model->Draw(commandList, nbones, m_drawBones.get(), m_world, m_modelNormal.cbegin());
-    
+
     PIXEndEvent(commandList);
 
 
@@ -217,12 +217,12 @@ void Game::CreateDeviceDependentResources()
 
     m_states = std::make_unique<CommonStates>(device);
 
-    m_model = Model::CreateFromSDKMESH(device, L"tank.sdkmesh",
-        ModelLoader_IncludeBones);
+    m_model = Model::CreateFromSDKMESH(device, L"tank.sdkmesh", ModelLoader_IncludeBones);
 
     const size_t nbones = m_model->bones.size();
     m_drawBones = ModelBone::MakeArray(nbones);
     m_animBones = ModelBone::MakeArray(nbones);
+
     uint32_t index = 0;
     for (const auto& it : m_model->bones) {
         if (_wcsicmp(it.name.c_str(), L"tank_geo") == 0) {
@@ -269,8 +269,8 @@ void Game::CreateWindowSizeDependentResources()
     // TODO: Initialize windows-size dependent objects here.
 
     auto size = m_deviceResources->GetOutputSize();
-    m_view = Matrix::CreateLookAt(Vector3(1000, 500, 0),
-        Vector3(0, 150, 0), Vector3::UnitY);
+    m_view = Matrix::CreateLookAt(Vector3(10, 2, 0),
+        Vector3(0, 2, 0), Vector3::UnitY);
     m_proj = Matrix::CreatePerspectiveFieldOfView(XM_PI / 4.f,
         float(size.right) / float(size.bottom), 0.1f, 10000.f);
 }
