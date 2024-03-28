@@ -259,8 +259,11 @@ void Game::CreateDeviceDependentResources()
     m_model = Model::CreateFromSDKMESH(device, L"tank.sdkmesh", ModelLoader_IncludeBones);
 
     const size_t nbones = m_model->bones.size();
+
     m_drawBones = ModelBone::MakeArray(nbones);
     m_animBones = ModelBone::MakeArray(nbones);
+
+    m_model->CopyBoneTransformsTo(nbones, m_animBones.get());
 
     uint32_t index = 0;
     for (const auto& it : m_model->bones)
@@ -282,8 +285,6 @@ void Game::CreateDeviceDependentResources()
 
         ++index;
     }
-
-    m_model->CopyBoneTransformsTo(nbones, m_animBones.get());
 
     ResourceUploadBatch resourceUpload(device);
 
@@ -321,8 +322,8 @@ void Game::CreateWindowSizeDependentResources()
     // TODO: Initialize windows-size dependent objects here.
 
     auto size = m_deviceResources->GetOutputSize();
-    m_view = Matrix::CreateLookAt(Vector3(10, 2, 0),
-        Vector3(0, 2, 0), Vector3::UnitY);
+    m_view = Matrix::CreateLookAt(Vector3(1000, 500, 0),
+        Vector3(0, 150, 0), Vector3::UnitY);
     m_proj = Matrix::CreatePerspectiveFieldOfView(XM_PI / 4.f,
         float(size.right) / float(size.bottom), 0.1f, 10000.f);
 }
