@@ -50,7 +50,6 @@ public:
     DXSample(UINT width, UINT height, std::wstring name);
     virtual ~DXSample();
     virtual void OnInit() = 0;
-    virtual void OnUpdate() = 0;
     virtual void OnRender() = 0;
     virtual void OnDestroy() = 0;
     virtual void OnKeyDown(UINT8 /*key*/) {}
@@ -58,14 +57,12 @@ public:
     UINT GetWidth() const { return m_width; }
     UINT GetHeight() const { return m_height; }
     const WCHAR* GetTitle() const { return m_title.c_str(); }
-    void ParseCommandLineArgs(_In_reads_(argc) WCHAR* argv[], int argc);
 protected:
     std::wstring GetAssetFullPath(LPCWSTR assetName);
     void GetHardwareAdapter(
         _In_ IDXGIFactory1* pFactory,
         _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter,
         bool requestHighPerformanceAdapter = false);
-    void SetCustomWindowText(LPCWSTR text);
     UINT m_width;
     UINT m_height;
     float m_aspectRatio;
@@ -79,7 +76,6 @@ class D3D12HelloTriangle : public DXSample {
 public:
     D3D12HelloTriangle(UINT width, UINT height, std::wstring name);
     virtual void OnInit();
-    virtual void OnUpdate();
     virtual void OnRender();
     virtual void OnDestroy();
 private:
@@ -131,65 +127,6 @@ std::wstring DXSample::GetAssetFullPath(LPCWSTR assetName) {
     return m_assetsPath + assetName;
 }
 
-_Use_decl_annotations_
-void DXSample::GetHardwareAdapter(
-    IDXGIFactory1* pFactory,
-    IDXGIAdapter1** ppAdapter,
-    bool requestHighPerformanceAdapter) {
-    *ppAdapter = nullptr;
-    ComPtr<IDXGIAdapter1> adapter;
-    ComPtr<IDXGIFactory6> factory6;
-    if (SUCCEEDED(pFactory->QueryInterface(IID_PPV_ARGS(&factory6)))) {
-        for (
-            UINT adapterIndex = 0;
-            SUCCEEDED(factory6->EnumAdapterByGpuPreference(
-                adapterIndex,
-                requestHighPerformanceAdapter == true ? DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE : DXGI_GPU_PREFERENCE_UNSPECIFIED,
-                IID_PPV_ARGS(&adapter)));
-                ++adapterIndex)
-        {
-            DXGI_ADAPTER_DESC1 desc;
-            adapter->GetDesc1(&desc);
-            if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
-                continue;
-            }
-            if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr))) {
-                break;
-            }
-        }
-    }
-    if (adapter.Get() == nullptr) {
-        for (UINT adapterIndex = 0; SUCCEEDED(pFactory->EnumAdapters1(adapterIndex, &adapter)); ++adapterIndex) {
-            DXGI_ADAPTER_DESC1 desc;
-            adapter->GetDesc1(&desc);
-            if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
-                continue;
-            }
-            if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr))) {
-                break;
-            }
-        }
-    }
-    *ppAdapter = adapter.Detach();
-}
-
-void DXSample::SetCustomWindowText(LPCWSTR text) {
-    std::wstring windowText = m_title + L": " + text;
-    SetWindowText(m_hwnd, windowText.c_str());
-}
-
-_Use_decl_annotations_
-void DXSample::ParseCommandLineArgs(WCHAR* argv[], int argc) {
-    for (int i = 1; i < argc; ++i) {
-        if (_wcsnicmp(argv[i], L"-warp", wcslen(argv[i])) == 0 ||
-            _wcsnicmp(argv[i], L"/warp", wcslen(argv[i])) == 0) {
-            m_useWarpDevice = true;
-            m_title = m_title + L" (WARP)";
-        }
-    }
-}
-
-
 D3D12HelloTriangle::D3D12HelloTriangle(UINT width, UINT height, std::wstring name) :
     DXSample(width, height, name),
     m_frameIndex(0),
@@ -203,37 +140,10 @@ void D3D12HelloTriangle::OnInit() {
 }
 
 void D3D12HelloTriangle::LoadPipeline() {
-    UINT dxgiFactoryFlags = 0;
-
-#if defined(_DEBUG)
-    {
-        ComPtr<ID3D12Debug> debugController;
-        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
-            debugController->EnableDebugLayer();
-            dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-        }
-    }
-#endif
     ComPtr<IDXGIFactory4> factory;
-    ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
-    if (m_useWarpDevice) {
-        ComPtr<IDXGIAdapter> warpAdapter;
-        ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
-        ThrowIfFailed(D3D12CreateDevice(
-            warpAdapter.Get(),
-            D3D_FEATURE_LEVEL_11_0,
-            IID_PPV_ARGS(&m_device)
-        ));
-    }
-    else {
-        ComPtr<IDXGIAdapter1> hardwareAdapter;
-        GetHardwareAdapter(factory.Get(), &hardwareAdapter);
-        ThrowIfFailed(D3D12CreateDevice(
-            hardwareAdapter.Get(),
-            D3D_FEATURE_LEVEL_11_0,
-            IID_PPV_ARGS(&m_device)
-        ));
-    }
+    ThrowIfFailed(CreateDXGIFactory2(0, IID_PPV_ARGS(&factory)));
+    ComPtr<IDXGIAdapter1> hardwareAdapter;
+    ThrowIfFailed(D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
     D3D12_COMMAND_QUEUE_DESC queueDesc = {};
     queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -350,8 +260,6 @@ void D3D12HelloTriangle::LoadAssets() {
     }
 }
 
-void D3D12HelloTriangle::OnUpdate(){}
-
 void D3D12HelloTriangle::OnRender() {
     PopulateCommandList();
     ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
@@ -398,9 +306,9 @@ D3D12HelloTriangle* sample;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
-    case WM_CLOSE: PostQuitMessage(0); break;
-    case WM_PAINT: sample->OnRender(); return 0;
-    default: return DefWindowProc(hWnd, message, wParam, lParam);
+        case WM_CLOSE: PostQuitMessage(0); break;
+        case WM_PAINT: sample->OnRender(); return 0;
+        default: return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
 }
