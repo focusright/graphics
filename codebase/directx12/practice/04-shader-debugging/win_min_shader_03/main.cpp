@@ -9,6 +9,10 @@
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
+UINT m_width = 1280;
+UINT m_height = 720;
+static HWND m_hwnd;
+
 inline std::string HrToString(HRESULT hr) {
     char s_str[64] = {};
     sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<UINT>(hr));
@@ -71,16 +75,6 @@ private:
     std::wstring m_title;
 };
 
-class Win32Application {
-public:
-    static int Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow);
-    static HWND GetHwnd() { return m_hwnd; }
-protected:
-    static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-private:
-    static HWND m_hwnd;
-};
-
 class D3D12HelloTriangle : public DXSample {
 public:
     D3D12HelloTriangle(UINT width, UINT height, std::wstring name);
@@ -118,75 +112,8 @@ private:
     void WaitForPreviousFrame();
 };
 
-HWND Win32Application::m_hwnd = nullptr;
 
-int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow) {
-    int argc;
-    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    pSample->ParseCommandLineArgs(argv, argc);
-    LocalFree(argv);
-    WNDCLASSEX windowClass = { 0 };
-    windowClass.cbSize = sizeof(WNDCLASSEX);
-    windowClass.style = CS_HREDRAW | CS_VREDRAW;
-    windowClass.lpfnWndProc = WindowProc;
-    windowClass.hInstance = hInstance;
-    windowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-    windowClass.lpszClassName = L"DXSampleClass";
-    RegisterClassEx(&windowClass);
-    RECT windowRect = { 0, 0, static_cast<LONG>(pSample->GetWidth()), static_cast<LONG>(pSample->GetHeight()) };
-    AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
-    m_hwnd = CreateWindow(
-        windowClass.lpszClassName,
-        pSample->GetTitle(),
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT,
-        CW_USEDEFAULT,
-        windowRect.right - windowRect.left,
-        windowRect.bottom - windowRect.top,
-        nullptr,        // We have no parent window.
-        nullptr,        // We aren't using menus.
-        hInstance,
-        pSample);
-    pSample->OnInit();
-    ShowWindow(m_hwnd, nCmdShow);
-    MSG msg = {};
-    while (GetMessage(&msg, NULL, 0, 0) > 0) { DispatchMessage(&msg); }
-    pSample->OnDestroy();
-    return static_cast<char>(msg.wParam);
-}
 
-LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-    DXSample* pSample = reinterpret_cast<DXSample*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-    switch (message) {
-    case WM_CREATE: {
-        LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
-        SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
-    }
-    return 0;
-    case WM_KEYDOWN:
-        if (pSample) {
-            pSample->OnKeyDown(static_cast<UINT8>(wParam));
-        }
-        return 0;
-    case WM_KEYUP:
-        if (pSample) {
-            pSample->OnKeyUp(static_cast<UINT8>(wParam));
-        }
-        return 0;
-    case WM_PAINT:
-        if (pSample) {
-            pSample->OnUpdate();
-            pSample->OnRender();
-        }
-        return 0;
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
-    }
-    return DefWindowProc(hWnd, message, wParam, lParam);
-}
-
-using namespace Microsoft::WRL;
 
 DXSample::DXSample(UINT width, UINT height, std::wstring name) :
     m_width(width),
@@ -248,7 +175,7 @@ void DXSample::GetHardwareAdapter(
 
 void DXSample::SetCustomWindowText(LPCWSTR text) {
     std::wstring windowText = m_title + L": " + text;
-    SetWindowText(Win32Application::GetHwnd(), windowText.c_str());
+    SetWindowText(m_hwnd, windowText.c_str());
 }
 
 _Use_decl_annotations_
@@ -322,13 +249,13 @@ void D3D12HelloTriangle::LoadPipeline() {
     ComPtr<IDXGISwapChain1> swapChain;
     ThrowIfFailed(factory->CreateSwapChainForHwnd(
         m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
-        Win32Application::GetHwnd(),
+        m_hwnd,
         &swapChainDesc,
         nullptr,
         nullptr,
         &swapChain
     ));
-    ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
+    ThrowIfFailed(factory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER));
     ThrowIfFailed(swapChain.As(&m_swapChain));
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
     {
@@ -467,9 +394,46 @@ void D3D12HelloTriangle::WaitForPreviousFrame() {
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
+D3D12HelloTriangle* sample;
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
+    case WM_CLOSE: PostQuitMessage(0); break;
+    case WM_PAINT: sample->OnRender(); return 0;
+    default: return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return 0;
+}
 
 _Use_decl_annotations_
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
-    D3D12HelloTriangle sample(1280, 720, L"D3D12 Hello Triangle");
-    return Win32Application::Run(&sample, hInstance, nCmdShow);
+    sample = new D3D12HelloTriangle(m_width, m_height, L"D3D12 Hello Triangle");
+    WNDCLASSEX windowClass = { 0 };
+    windowClass.cbSize = sizeof(WNDCLASSEX);
+    windowClass.style = CS_HREDRAW | CS_VREDRAW;
+    windowClass.lpfnWndProc = WndProc;
+    windowClass.hInstance = hInstance;
+    windowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+    windowClass.lpszClassName = L"DXSampleClass";
+    RegisterClassEx(&windowClass);
+    RECT windowRect = { 0, 0, static_cast<LONG>(m_width), static_cast<LONG>(m_height) };
+    AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
+    m_hwnd = CreateWindow(
+        windowClass.lpszClassName,
+        sample->GetTitle(),
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        windowRect.right - windowRect.left,
+        windowRect.bottom - windowRect.top,
+        nullptr,        // We have no parent window.
+        nullptr,        // We aren't using menus.
+        hInstance,
+        NULL);
+    sample->OnInit();
+    ShowWindow(m_hwnd, nCmdShow);
+    MSG msg = {};
+    while (GetMessage(&msg, NULL, 0, 0) > 0) { DispatchMessage(&msg); }
+    sample->OnDestroy();
+    return static_cast<char>(msg.wParam);
 }
