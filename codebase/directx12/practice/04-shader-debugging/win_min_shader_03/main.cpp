@@ -47,34 +47,36 @@ inline void GetAssetsPath(_Out_writes_(pathSize) WCHAR* path, UINT pathSize) {
 
 class DXSample {
 public:
-    DXSample(UINT width, UINT height, std::wstring name);
+    DXSample();
     virtual ~DXSample();
     virtual void OnInit() = 0;
     virtual void OnRender() = 0;
     virtual void OnDestroy() = 0;
-    virtual void OnKeyDown(UINT8 /*key*/) {}
-    virtual void OnKeyUp(UINT8 /*key*/) {}
     UINT GetWidth() const { return m_width; }
     UINT GetHeight() const { return m_height; }
-    const WCHAR* GetTitle() const { return m_title.c_str(); }
 protected:
     std::wstring GetAssetFullPath(LPCWSTR assetName);
-    void GetHardwareAdapter(
-        _In_ IDXGIFactory1* pFactory,
-        _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter,
-        bool requestHighPerformanceAdapter = false);
-    UINT m_width;
-    UINT m_height;
     float m_aspectRatio;
-    bool m_useWarpDevice;
 private:
     std::wstring m_assetsPath;
-    std::wstring m_title;
 };
+
+DXSample::DXSample() {
+    WCHAR assetsPath[512];
+    GetAssetsPath(assetsPath, _countof(assetsPath));
+    m_assetsPath = assetsPath;
+    m_aspectRatio = static_cast<float>(m_width) / static_cast<float>(m_height);
+}
+DXSample::~DXSample() {}
+
+std::wstring DXSample::GetAssetFullPath(LPCWSTR assetName) {
+    return m_assetsPath + assetName;
+}
+
 
 class D3D12HelloTriangle : public DXSample {
 public:
-    D3D12HelloTriangle(UINT width, UINT height, std::wstring name);
+    D3D12HelloTriangle();
     virtual void OnInit();
     virtual void OnRender();
     virtual void OnDestroy();
@@ -108,30 +110,10 @@ private:
     void WaitForPreviousFrame();
 };
 
-
-
-
-DXSample::DXSample(UINT width, UINT height, std::wstring name) :
-    m_width(width),
-    m_height(height),
-    m_title(name),
-    m_useWarpDevice(false) {
-    WCHAR assetsPath[512];
-    GetAssetsPath(assetsPath, _countof(assetsPath));
-    m_assetsPath = assetsPath;
-    m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
-}
-DXSample::~DXSample() {}
-
-std::wstring DXSample::GetAssetFullPath(LPCWSTR assetName) {
-    return m_assetsPath + assetName;
-}
-
-D3D12HelloTriangle::D3D12HelloTriangle(UINT width, UINT height, std::wstring name) :
-    DXSample(width, height, name),
+D3D12HelloTriangle::D3D12HelloTriangle() :
     m_frameIndex(0),
-    m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
-    m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
+    m_viewport(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height)),
+    m_scissorRect(0, 0, static_cast<LONG>(m_width), static_cast<LONG>(m_height)),
     m_rtvDescriptorSize(0) {}
 
 void D3D12HelloTriangle::OnInit() {
@@ -315,7 +297,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
 _Use_decl_annotations_
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
-    sample = new D3D12HelloTriangle(m_width, m_height, L"D3D12 Hello Triangle");
+    sample = new D3D12HelloTriangle();
     WNDCLASSEX windowClass = { 0 };
     windowClass.cbSize = sizeof(WNDCLASSEX);
     windowClass.style = CS_HREDRAW | CS_VREDRAW;
@@ -328,7 +310,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
     m_hwnd = CreateWindow(
         windowClass.lpszClassName,
-        sample->GetTitle(),
+        L"D3D12 Hello Triangle",
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
