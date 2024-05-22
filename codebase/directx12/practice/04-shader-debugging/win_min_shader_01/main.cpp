@@ -33,6 +33,7 @@ static HWND m_hwnd;
 
 std::wstring m_assetsPath;
 float m_aspectRatio;
+static const UINT FrameCount = 2;
 
 struct Vertex {
     XMFLOAT3 position;
@@ -83,46 +84,46 @@ void WaitForPreviousFrame() {
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
-
-
-
 void LoadPipeline() {
+    ComPtr<IDXGIFactory4> factory;
+    ThrowIfFailed(CreateDXGIFactory2(0, IID_PPV_ARGS(&factory)));
     ComPtr<IDXGIAdapter1> hardwareAdapter;
-    D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
+    ThrowIfFailed(D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
     D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-    m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue));
-
+    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.BufferCount = FRAMECOUNT;
+    swapChainDesc.BufferCount = FrameCount;
     swapChainDesc.Width = m_width;
     swapChainDesc.Height = m_height;
     swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swapChainDesc.SampleDesc.Count = 1;
-
-    ComPtr<IDXGIFactory4> factory;
-    CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
     ComPtr<IDXGISwapChain1> swapChain;
-    factory->CreateSwapChainForHwnd(m_commandQueue.Get(), m_hwnd, &swapChainDesc, nullptr, nullptr, &swapChain);
-    factory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER);
-    swapChain.As(&m_swapChain);
+    ThrowIfFailed(factory->CreateSwapChainForHwnd(m_commandQueue.Get(), m_hwnd, &swapChainDesc, nullptr, nullptr, &swapChain));
+    ThrowIfFailed(factory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER));
+    ThrowIfFailed(swapChain.As(&m_swapChain));
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-
-    D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-    rtvHeapDesc.NumDescriptors = FRAMECOUNT;
-    rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap));
-    m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-    for (UINT n = 0; n < FRAMECOUNT; n++) {
-        m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n]));
-        m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
-        rtvHandle.Offset(1, m_rtvDescriptorSize);
+    {
+        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+        rtvHeapDesc.NumDescriptors = FrameCount;
+        rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
+        m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     }
-    m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
-    m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList));
+    {
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+        for (UINT n = 0; n < FrameCount; n++)
+        {
+            ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+            m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+            rtvHandle.Offset(1, m_rtvDescriptorSize);
+        }
+    }
+    ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
 }
 
 void LoadAssets() {
@@ -134,22 +135,15 @@ void LoadAssets() {
         ComPtr<ID3DBlob> error;
         ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
         ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
-    }
-    {
+    }{
         ComPtr<ID3DBlob> vertexShader;
         ComPtr<ID3DBlob> pixelShader;
 
-#if defined(_DEBUG)
-        // Enable better shader debugging with the graphics debugging tools.
         UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-        UINT compileFlags = 0;
-#endif
         ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
         ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
 
-        D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-        {
+        D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
             { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
             { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
         };
@@ -238,7 +232,7 @@ void OnRender() {
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
         case WM_CLOSE: PostQuitMessage(0); break;
-        case WM_PAINT: OnRender();
+        case WM_PAINT: OnRender(); return 0;
         default: return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
@@ -261,16 +255,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, LPSTR cmdLine, i
     wc.hInstance = hInstance;
     wc.hbrBackground = (HBRUSH)(COLOR_BACKGROUND);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.lpszClassName = L"DX12 Window Init";
+    wc.lpszClassName = L"WinMin";
     if (!RegisterClassEx(&wc)) { return 1; }
     RECT windowRect = { 0, 0, static_cast<LONG>(m_width), static_cast<LONG>(m_height) };
     AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
-    m_hwnd = CreateWindow(wc.lpszClassName, L"Window", WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top, 0, 0, hInstance, NULL);
+    m_hwnd = CreateWindow(wc.lpszClassName, L"Window Minimum Shader", WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top, 0, 0, hInstance, NULL);
 
     if (!m_hwnd) { return 2; }
     Constructor();
     LoadPipeline();
     LoadAssets();
+    
     MSG msg = {};
     while (GetMessage(&msg, NULL, 0, 0) > 0) { DispatchMessage(&msg); }
 
