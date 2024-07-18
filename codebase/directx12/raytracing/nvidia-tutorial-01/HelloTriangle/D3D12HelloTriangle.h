@@ -13,6 +13,11 @@
 
 #include "DXSample.h"
 #include <stdexcept>
+#include <dxcapi.h>
+#include <vector>
+//#include "DXRHelper.h"
+#include "nv_helpers_dx12/BottomLevelASGenerator.h"
+#include "nv_helpers_dx12/TopLevelASGenerator.h"
 
 using namespace DirectX;
 
@@ -23,8 +28,14 @@ using namespace DirectX;
 // An example of this can be found in the class method: OnDestroy().
 using Microsoft::WRL::ComPtr;
 
-class D3D12HelloTriangle : public DXSample
-{
+// #DXR
+struct AccelerationStructureBuffers {
+	ComPtr<ID3D12Resource> pScratch;      // Scratch memory for AS builder
+	ComPtr<ID3D12Resource> pResult;       // Where the AS is
+	ComPtr<ID3D12Resource> pInstanceDesc; // Hold the matrices of the instances
+};
+
+class D3D12HelloTriangle : public DXSample {
 public:
 	D3D12HelloTriangle(UINT width, UINT height, std::wstring name);
 
@@ -36,8 +47,7 @@ public:
 private:
 	static const UINT FrameCount = 2;
 
-	struct Vertex
-	{
+	struct Vertex {
 		XMFLOAT3 position;
 		XMFLOAT4 color;
 	};
@@ -74,4 +84,10 @@ private:
 	void CheckRaytracingSupport();
 	virtual void OnKeyUp(UINT8 key);
 	bool m_raster = true;
+
+	ComPtr<ID3D12Resource> m_bottomLevelAS; // Storage for the bottom Level AS
+	nv_helpers_dx12::TopLevelASGenerator m_topLevelASGenerator;
+	AccelerationStructureBuffers m_topLevelASBuffers;
+	std::vector<std::pair<ComPtr<ID3D12Resource>, DirectX::XMMATRIX>> m_instances;
 };
+
