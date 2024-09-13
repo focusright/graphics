@@ -4,6 +4,29 @@
         <meta charset="utf-8">
         <title>WebGPU Samples</title>
     </head>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: 'Inconsolata', monospace;
+        }
+        a {
+          color: #02ABFF;
+          text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        h1 {
+          color: #02ABFF;
+        }
+        h3 {
+          color: #73CEFF;
+        }
+        ul {
+          list-style-type: none;
+        }
+    </style>
     <body>
         <h1>WebGPU Samples</h1>
         Original 
@@ -14,56 +37,56 @@
 
         <h3>Basic Graphics</h3>
         <ul>
-            <li><a href="01-helloTriangle.html">          helloTriangle.html     </a></li>
-            <li><a href="02-helloTriangleMSAA.html">      helloTriangleMSAA.html </a></li>
-            <li><a href="04-rotatingCube.html">           rotatingCube           </a></li>
-            <li><a href="05-twoCubes.html">               twoCubes               </a></li>
-            <li><a href="06-texturedCube.html">           texturedCube           </a></li>
-            <li><a href="07-instancedCube.html">          instancedCube          </a></li>
-            <li><a href="08-fractalCube.html">            fractalCube            </a></li>
-            <li><a href="09-cubemap.html">                cubemap                </a></li>
+            <li><a href="helloTriangle.html">           helloTriangle.html     </a></li>
+            <li><a href="helloTriangleMSAA.html">       helloTriangleMSAA.html </a></li>
+            <li><a href="rotatingCube.html">            rotatingCube           </a></li>
+            <li><a href="twoCubes.html">                twoCubes               </a></li>
+            <li><a href="texturedCube.html">            texturedCube           </a></li>
+            <li><a href="instancedCube.html">           instancedCube          </a></li>
+            <li><a href="fractalCube.html">             fractalCube            </a></li>
+            <li><a href="cubemap.html">                 cubemap                </a></li>
         </ul>
         <h3>WebGPU Features</h3>
         <ul>
-            <li><a href="14-samplerParameters.html">      samplerParameters      </a></li>
-            <li><a href="17-reversedZ.html">              reversedZ              </a></li>
-            <li><a href="22-renderBundles.html">          renderBundles          </a></li>
-            <li><a href="">                               occlusionQuery (empty) </a></li>
+            <li><a href="samplerParameters.html">       samplerParameters      </a></li>
+            <li><a href="reversedZ.html">               reversedZ              </a></li>
+            <li><a href="renderBundles.html">           renderBundles          </a></li>
+            <li><a href="">                             occlusionQuery (empty) </a></li>
         </ul>
         <h3>GPGPU Demos</h3>
         <ul>
-            <li><a href="10-computeBoids.html">           computeBoids        </a></li>
-            <li><a href="21-gameOfLife.html">             gameOfLife          </a></li>
-            <li><a href="">                               bitonicSort (empty) </a></li>
+            <li><a href="computeBoids.html">            computeBoids        </a></li>
+            <li><a href="gameOfLife.html">              gameOfLife          </a></li>
+            <li><a href="">                             bitonicSort (empty) </a></li>
         </ul>
         <h3>Graphics Techniques</h3>
         <ul>
-            <li><a href="">                               cameras   (empty)                </a></li>
-            <li><a href="">                               normalMap (empty)                </a></li>
-            <li><a href="16-shadowMapping.html">          shadowMapping                    </a></li>
-            <li><a href="18-deferredRendering.html">      deferredRendering                </a></li>
-            <li><a href="19-particles.html">              particles                        </a></li>
-            <li><a href="">                               points (empty)                   </a></li>
-            <li><a href="15-imageBlur.html">              imageBlur                        </a></li>
-            <li><a href="20-cornell.html">                cornell                          </a></li>
-            <li><a href="24-a-buffer.html">               a-buffer                         </a></li>
-            <li><a href="">                               skinnedMesh       (empty)        </a></li>
-            <li><a href="">                               textRenderingMsdf (empty)        </a></li>
-            <li><a href="">                               volumeRenderingTexture3D (empty) </a></li>
-            <li><a href="wireframe.html">                 wireframe                        </a></li>
+            <li><a href="">                             cameras   (empty)                </a></li>
+            <li><a href="">                             normalMap (empty)                </a></li>
+            <li><a href="shadowMapping.html">           shadowMapping                    </a></li>
+            <li><a href="deferredRendering.html">       deferredRendering                </a></li>
+            <li><a href="particles.html">               particles                        </a></li>
+            <li><a href="">                             points (empty)                   </a></li>
+            <li><a href="imageBlur.html">               imageBlur                        </a></li>
+            <li><a href="cornell.html">                 cornell                          </a></li>
+            <li><a href="a-buffer.html">                a-buffer                         </a></li>
+            <li><a href="">                             skinnedMesh       (empty)        </a></li>
+            <li><a href="">                             textRenderingMsdf (empty)        </a></li>
+            <li><a href="">                             volumeRenderingTexture3D (empty) </a></li>
+            <li><a href="wireframe.html">               wireframe                        </a></li>
         </ul>
         <h3>Web Platform Integration</h3>
         <ul>
-            <li><a href="03-resizeCanvas.html">           resizeCanvas                </a></li>
-            <li><a href="">                               resizeObserverHDDPI (empty) </a></li>
-            <li><a href="">                               multipleCanvases (empty)    </a></li>
-            <li><a href="12-videoUploading.html">         videoUploading              </a></li>
-            <li><a href="13-videoUploadingWebCodecs.html">videoUploadingWebCodecs     </a></li>
-            <li><a href="23-worker.html">                 worker                      </a></li>
+            <li><a href="resizeCanvas.html">            resizeCanvas                </a></li>
+            <li><a href="">                             resizeObserverHDDPI (empty) </a></li>
+            <li><a href="">                             multipleCanvases (empty)    </a></li>
+            <li><a href="videoUploading.html">          videoUploading              </a></li>
+            <li><a href="videoUploadingWebCodecs.html"> videoUploadingWebCodecs     </a></li>
+            <li><a href="worker.html">                  worker                      </a></li>
         </ul>
         <h3>Benchmarks</h3>
         <ul>
-            <li><a href="11-animometer.html">             animometer             </a></li>
+            <li><a href="animometer.html">              animometer             </a></li>
         </ul>
         <hr>
     </body>
