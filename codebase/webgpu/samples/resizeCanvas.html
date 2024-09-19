@@ -44,6 +44,8 @@
             <canvas width="600" height="600"></canvas>
         </div>
         <script type="module">
+            import { quitIfWebGPUNotAvailable } from './util.js';
+
             const triangleVertWGSL = `
                 @vertex            
                 fn main(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4<f32> {
@@ -63,8 +65,9 @@
 
             const canvas = document.querySelector("canvas");
 
-            const adapter = await navigator.gpu.requestAdapter();
-            const device = await adapter.requestDevice();
+            const adapter = await navigator.gpu ? await navigator.gpu.requestAdapter() : null;
+            const device = adapter ? await adapter.requestDevice() : null;
+            quitIfWebGPUNotAvailable(adapter, device);
 
             const context = canvas.getContext('webgpu');
             
