@@ -65,8 +65,8 @@
 
             const canvas = document.querySelector("canvas");
 
-            const adapter = await navigator.gpu ? await navigator.gpu.requestAdapter() : null;
-            const device = adapter ? await adapter.requestDevice() : null;
+            const adapter = await navigator.gpu?.requestAdapter();
+            const device = await adapter?.requestDevice();
             quitIfWebGPUNotAvailable(adapter, device);
 
             const context = canvas.getContext('webgpu');

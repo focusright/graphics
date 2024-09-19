@@ -5,14 +5,19 @@
         <title>Wireframe</title>
         <script src="./assets/dat.gui.js"></script>
         <style>
-            canvas {
-                max-width: 600px;
-                aspect-ratio: 1;
+            :root {
+                color-scheme: light dark;
             }
-
-            .wrapper {
-                text-align: center;
-                position: relative;
+            html, body {
+                margin: 0;      /* remove default margin */
+                height: 100%;   /* make body fill the browser window */
+                display: flex;
+                place-content: center center;
+            }
+            canvas {
+                width: 600px;
+                height: 600px;
+                max-width: 100%;
                 display: block;
             }
         </style>
@@ -28,15 +33,13 @@
             //models.ts
             import { mesh as teapot } from './assets/meshes/teapot/teapot.js';
             import { createSphereMesh } from './assets/meshes/sphere.js';
+            // Ideally all the models would be the same format
+            // and we'd determine that format at build time or before
+            // but, we want to reuse the model data in this repo
+            // so we'll normalize it here
             function convertMeshToTypedArrays(mesh, scale, offset = [0, 0, 0]) {
-                const {
-                    positions,
-                    normals,
-                    triangles
-                } = mesh;
-                const scaledPositions = positions.map((p) =>
-                    p.map((v, i) => v * scale + offset[i % 3])
-                );
+                const { positions, normals, triangles } = mesh;
+                const scaledPositions = positions.map((p) => p.map((v, i) => v * scale + offset[i % 3]));
                 const vertices = new Float32Array(scaledPositions.length * 6);
                 for (let i = 0; i < scaledPositions.length; ++i) {
                     vertices.set(scaledPositions[i], 6 * i);
@@ -46,22 +49,13 @@
                 for (let i = 0; i < triangles.length; ++i) {
                     indices.set(triangles[i], 3 * i);
                 }
-
                 return {
                     vertices,
                     indices,
                 };
             }
             function createSphereTypedArrays(radius, widthSegments = 32, heightSegments = 16, randomness = 0) {
-                const {
-                    vertices: verticesWithUVs,
-                    indices
-                } = createSphereMesh(
-                    radius,
-                    widthSegments,
-                    heightSegments,
-                    randomness
-                );
+                const { vertices: verticesWithUVs, indices } = createSphereMesh(radius, widthSegments, heightSegments, randomness);
                 const numVertices = verticesWithUVs.length / 8;
                 const vertices = new Float32Array(numVertices * 6);
                 for (let i = 0; i < numVertices; ++i) {
@@ -74,10 +68,7 @@
                     indices: new Uint32Array(indices),
                 };
             }
-            function flattenNormals({
-                vertices,
-                indices
-            }) {
+            function flattenNormals({ vertices, indices, }) {
                 const newVertices = new Float32Array(indices.length * 6);
                 const newIndices = new Uint32Array(indices.length);
                 for (let i = 0; i < indices.length; i += 3) {
@@ -86,17 +77,13 @@
                         const ndx = indices[i + j];
                         const srcNdx = ndx * 6;
                         const dstNdx = (i + j) * 6;
+                        // copy position
                         const pos = vertices.subarray(srcNdx, srcNdx + 3);
                         newVertices.set(pos, dstNdx);
                         positions.push(pos);
                         newIndices[i + j] = i + j;
                     }
-                    const normal = vec3.normalize(
-                        vec3.cross(
-                            vec3.normalize(vec3.subtract(positions[1], positions[0])),
-                            vec3.normalize(vec3.subtract(positions[2], positions[1]))
-                        )
-                    );
+                    const normal = vec3.normalize(vec3.cross(vec3.normalize(vec3.subtract(positions[1], positions[0])), vec3.normalize(vec3.subtract(positions[2], positions[1]))));
                     for (let j = 0; j < 3; ++j) {
                         const dstNdx = (i + j) * 6;
                         newVertices.set(normal, dstNdx + 3);
@@ -116,172 +103,171 @@
 
 
             //utils.ts
-            export function rand(min, max) {
+            function rand(min, max) {
                 if (min === undefined) {
                     max = 1;
                     min = 0;
-                } else if (max === undefined) {
+                }
+                else if (max === undefined) {
                     max = min;
                     min = 0;
                 }
                 return Math.random() * (max - min) + min;
             }
-            export function randInt(min, max) {
+            function randInt(min, max) {
                 return Math.floor(rand(min, max));
             }
-            export function randColor() {
+            function randColor() {
                 return [rand(), rand(), rand(), 1];
             }
-            export function randElement(arr) {
-                return arr[randInt(0, arr.length)];
+            function randElement(arr) {
+                return arr[randInt(arr.length)];
             }
 
 
             //main.ts
             import { quitIfWebGPUNotAvailable } from './util.js';
 
-            const solidColorLitWGSL = `
-                struct Uniforms {
-                  worldViewProjectionMatrix: mat4x4f,
-                  worldMatrix: mat4x4f,
-                  color: vec4f,
-                };
+var solidColorLitWGSL = `struct Uniforms {
+  worldViewProjectionMatrix: mat4x4f,
+  worldMatrix: mat4x4f,
+  color: vec4f,
+};
 
-                struct Vertex {
-                  @location(0) position: vec4f,
-                  @location(1) normal: vec3f,
-                };
+struct Vertex {
+  @location(0) position: vec4f,
+  @location(1) normal: vec3f,
+};
 
-                struct VSOut {
-                  @builtin(position) position: vec4f,
-                  @location(0) normal: vec3f,
-                };
+struct VSOut {
+  @builtin(position) position: vec4f,
+  @location(0) normal: vec3f,
+};
 
-                @group(0) @binding(0) var<uniform> uni: Uniforms;
+@group(0) @binding(0) var<uniform> uni: Uniforms;
 
-                @vertex fn vs(vin: Vertex) -> VSOut {
-                  var vOut: VSOut;
-                  vOut.position = uni.worldViewProjectionMatrix * vin.position;
-                  vOut.normal = (uni.worldMatrix * vec4f(vin.normal, 0)).xyz;
-                  return vOut;
-                }
+@vertex fn vs(vin: Vertex) -> VSOut {
+  var vOut: VSOut;
+  vOut.position = uni.worldViewProjectionMatrix * vin.position;
+  vOut.normal = (uni.worldMatrix * vec4f(vin.normal, 0)).xyz;
+  return vOut;
+}
 
-                @fragment fn fs(vin: VSOut) -> @location(0) vec4f {
-                  let lightDirection = normalize(vec3f(4, 10, 6));
-                  let light = dot(normalize(vin.normal), lightDirection) * 0.5 + 0.5;
-                  return vec4f(uni.color.rgb * light, uni.color.a);
-                }
-            `;
-            const wireframeWGSL = `
-                struct Uniforms {
-                  worldViewProjectionMatrix: mat4x4f,
-                  worldMatrix: mat4x4f,
-                  color: vec4f,
-                };
+@fragment fn fs(vin: VSOut) -> @location(0) vec4f {
+  let lightDirection = normalize(vec3f(4, 10, 6));
+  let light = dot(normalize(vin.normal), lightDirection) * 0.5 + 0.5;
+  return vec4f(uni.color.rgb * light, uni.color.a);
+}
+`;
+var wireframeWGSL = `struct Uniforms {
+  worldViewProjectionMatrix: mat4x4f,
+  worldMatrix: mat4x4f,
+  color: vec4f,
+};
 
-                struct LineUniforms {
-                  stride: u32,
-                  thickness: f32,
-                  alphaThreshold: f32,
-                };
+struct LineUniforms {
+  stride: u32,
+  thickness: f32,
+  alphaThreshold: f32,
+};
 
-                struct VSOut {
-                  @builtin(position) position: vec4f,
-                };
+struct VSOut {
+  @builtin(position) position: vec4f,
+};
 
-                @group(0) @binding(0) var<uniform> uni: Uniforms;
-                @group(0) @binding(1) var<storage, read> positions: array<f32>;
-                @group(0) @binding(2) var<storage, read> indices: array<u32>;
-                @group(0) @binding(3) var<uniform> line: LineUniforms;
+@group(0) @binding(0) var<uniform> uni: Uniforms;
+@group(0) @binding(1) var<storage, read> positions: array<f32>;
+@group(0) @binding(2) var<storage, read> indices: array<u32>;
+@group(0) @binding(3) var<uniform> line: LineUniforms;
 
-                @vertex fn vsIndexedU32(@builtin(vertex_index) vNdx: u32) -> VSOut {
-                  // indices make a triangle so for every 3 indices we need to output
-                  // 6 values
-                  let triNdx = vNdx / 6;
-                  // 0 1 0 1 0 1  0 1 0 1 0 1  vNdx % 2
-                  // 0 0 1 1 2 2  3 3 4 4 5 5  vNdx / 2
-                  // 0 1 1 2 2 3  3 4 4 5 5 6  vNdx % 2 + vNdx / 2
-                  // 0 1 1 2 2 0  0 1 1 2 2 0  (vNdx % 2 + vNdx / 2) % 3
-                  let vertNdx = (vNdx % 2 + vNdx / 2) % 3;
-                  let index = indices[triNdx * 3 + vertNdx];
+@vertex fn vsIndexedU32(@builtin(vertex_index) vNdx: u32) -> VSOut {
+  // indices make a triangle so for every 3 indices we need to output
+  // 6 values
+  let triNdx = vNdx / 6;
+  // 0 1 0 1 0 1  0 1 0 1 0 1  vNdx % 2
+  // 0 0 1 1 2 2  3 3 4 4 5 5  vNdx / 2
+  // 0 1 1 2 2 3  3 4 4 5 5 6  vNdx % 2 + vNdx / 2
+  // 0 1 1 2 2 0  0 1 1 2 2 0  (vNdx % 2 + vNdx / 2) % 3
+  let vertNdx = (vNdx % 2 + vNdx / 2) % 3;
+  let index = indices[triNdx * 3 + vertNdx];
 
-                  // note:
-                  //
-                  // * if your indices are U16 you could use this
-                  //
-                  //    let indexNdx = triNdx * 3 + vertNdx;
-                  //    let twoIndices = indices[indexNdx / 2];  // indices is u32 but we want u16
-                  //    let index = (twoIndices >> ((indexNdx & 1) * 16)) & 0xFFFF;
-                  //
-                  // * if you're not using indices you could use this
-                  //
-                  //    let index = triNdx * 3 + vertNdx;
+  // note:
+  //
+  // * if your indices are U16 you could use this
+  //
+  //    let indexNdx = triNdx * 3 + vertNdx;
+  //    let twoIndices = indices[indexNdx / 2];  // indices is u32 but we want u16
+  //    let index = (twoIndices >> ((indexNdx & 1) * 16)) & 0xFFFF;
+  //
+  // * if you're not using indices you could use this
+  //
+  //    let index = triNdx * 3 + vertNdx;
 
-                  let pNdx = index * line.stride;
-                  let position = vec4f(positions[pNdx], positions[pNdx + 1], positions[pNdx + 2], 1);
+  let pNdx = index * line.stride;
+  let position = vec4f(positions[pNdx], positions[pNdx + 1], positions[pNdx + 2], 1);
 
-                  var vOut: VSOut;
-                  vOut.position = uni.worldViewProjectionMatrix * position;
-                  return vOut;
-                }
+  var vOut: VSOut;
+  vOut.position = uni.worldViewProjectionMatrix * position;
+  return vOut;
+}
 
-                @fragment fn fs() -> @location(0) vec4f {
-                  return uni.color + vec4f(0.5);
-                }
+@fragment fn fs() -> @location(0) vec4f {
+  return uni.color + vec4f(0.5);
+}
 
-                struct BarycentricCoordinateBasedVSOutput {
-                  @builtin(position) position: vec4f,
-                  @location(0) barycenticCoord: vec3f,
-                };
+struct BarycentricCoordinateBasedVSOutput {
+  @builtin(position) position: vec4f,
+  @location(0) barycenticCoord: vec3f,
+};
 
-                @vertex fn vsIndexedU32BarycentricCoordinateBasedLines(
-                  @builtin(vertex_index) vNdx: u32
-                ) -> BarycentricCoordinateBasedVSOutput {
-                  let vertNdx = vNdx % 3;
-                  let index = indices[vNdx];
+@vertex fn vsIndexedU32BarycentricCoordinateBasedLines(
+  @builtin(vertex_index) vNdx: u32
+) -> BarycentricCoordinateBasedVSOutput {
+  let vertNdx = vNdx % 3;
+  let index = indices[vNdx];
 
-                  // note:
-                  //
-                  // * if your indices are U16 you could use this
-                  //
-                  //    let twoIndices = indices[vNdx / 2];  // indices is u32 but we want u16
-                  //    let index = (twoIndices >> ((vNdx & 1) * 16)) & 0xFFFF;
-                  //
-                  // * if you're not using indices you could use this
-                  //
-                  //    let index = vNdx;
+  // note:
+  //
+  // * if your indices are U16 you could use this
+  //
+  //    let twoIndices = indices[vNdx / 2];  // indices is u32 but we want u16
+  //    let index = (twoIndices >> ((vNdx & 1) * 16)) & 0xFFFF;
+  //
+  // * if you're not using indices you could use this
+  //
+  //    let index = vNdx;
 
-                  let pNdx = index * line.stride;
-                  let position = vec4f(positions[pNdx], positions[pNdx + 1], positions[pNdx + 2], 1);
+  let pNdx = index * line.stride;
+  let position = vec4f(positions[pNdx], positions[pNdx + 1], positions[pNdx + 2], 1);
 
-                  var vsOut: BarycentricCoordinateBasedVSOutput;
-                  vsOut.position = uni.worldViewProjectionMatrix * position;
+  var vsOut: BarycentricCoordinateBasedVSOutput;
+  vsOut.position = uni.worldViewProjectionMatrix * position;
 
-                  // emit a barycentric coordinate
-                  vsOut.barycenticCoord = vec3f(0);
-                  vsOut.barycenticCoord[vertNdx] = 1.0;
-                  return vsOut;
-                }
+  // emit a barycentric coordinate
+  vsOut.barycenticCoord = vec3f(0);
+  vsOut.barycenticCoord[vertNdx] = 1.0;
+  return vsOut;
+}
 
-                fn edgeFactor(bary: vec3f) -> f32 {
-                  let d = fwidth(bary);
-                  let a3 = smoothstep(vec3f(0.0), d * line.thickness, bary);
-                  return min(min(a3.x, a3.y), a3.z);
-                }
+fn edgeFactor(bary: vec3f) -> f32 {
+  let d = fwidth(bary);
+  let a3 = smoothstep(vec3f(0.0), d * line.thickness, bary);
+  return min(min(a3.x, a3.y), a3.z);
+}
 
-                @fragment fn fsBarycentricCoordinateBasedLines(
-                  v: BarycentricCoordinateBasedVSOutput
-                ) -> @location(0) vec4f {
-                  let a = 1.0 - edgeFactor(v.barycenticCoord);
-                  if (a < line.alphaThreshold) {
-                    discard;
-                  }
+@fragment fn fsBarycentricCoordinateBasedLines(
+  v: BarycentricCoordinateBasedVSOutput
+) -> @location(0) vec4f {
+  let a = 1.0 - edgeFactor(v.barycenticCoord);
+  if (a < line.alphaThreshold) {
+    discard;
+  }
 
-                  return vec4((uni.color.rgb + 0.5) * a, a);
-                }
-            `;
+  return vec4((uni.color.rgb + 0.5) * a, a);
+}
+`;
 
-            var settings = {
+            const settings = {
                 barycentricCoordinatesBased: false,
                 thickness: 2,
                 alphaThreshold: 0.5,
@@ -291,62 +277,57 @@
                 depthBiasSlopeScale: 0.5,
                 models: true,
             };
-
             function createBufferWithData(device, data, usage) {
-                var buffer = device.createBuffer({
+                const buffer = device.createBuffer({
                     size: data.byteLength,
-                    usage: usage,
+                    usage,
                 });
                 device.queue.writeBuffer(buffer, 0, data);
                 return buffer;
             }
-
-            function createVertexAndIndexBuffer(device, _a) {
-                var vertices = _a.vertices,
-                    indices = _a.indices;
-                var vertexBuffer = createBufferWithData(device, vertices, GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST);
-                var indexBuffer = createBufferWithData(device, indices, GPUBufferUsage.INDEX | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST);
+            function createVertexAndIndexBuffer(device, { vertices, indices }) {
+                const vertexBuffer = createBufferWithData(device, vertices, GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST);
+                const indexBuffer = createBufferWithData(device, indices, GPUBufferUsage.INDEX | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST);
                 return {
-                    vertexBuffer: vertexBuffer,
-                    indexBuffer: indexBuffer,
+                    vertexBuffer,
+                    indexBuffer,
                     indexFormat: 'uint32',
                     vertexCount: indices.length,
                 };
             }
-            const adapter = await navigator.gpu ? await navigator.gpu.requestAdapter() : null;
-            const device = adapter ? await adapter.requestDevice() : null;
+            const adapter = await navigator.gpu?.requestAdapter();
+            const device = await adapter?.requestDevice();
             quitIfWebGPUNotAvailable(adapter, device);
-            var canvas = document.querySelector('canvas');
-            var context = canvas.getContext('webgpu');
-            var devicePixelRatio = window.devicePixelRatio;
+            const canvas = document.querySelector('canvas');
+            const context = canvas.getContext('webgpu');
+            const devicePixelRatio = window.devicePixelRatio;
             canvas.width = canvas.clientWidth * devicePixelRatio;
             canvas.height = canvas.clientHeight * devicePixelRatio;
-            var presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+            const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
             context.configure({
-                device: device,
+                device,
                 format: presentationFormat,
                 alphaMode: 'premultiplied',
             });
-            var depthFormat = 'depth24plus';
-            var models = Object.values(modelData).map(function(data) {
-                return createVertexAndIndexBuffer(device, data);
-            });
-            var litModule = device.createShaderModule({
+            const depthFormat = 'depth24plus';
+            const models = Object.values(modelData).map((data) => createVertexAndIndexBuffer(device, data));
+            const litModule = device.createShaderModule({
                 code: solidColorLitWGSL,
             });
-            var wireframeModule = device.createShaderModule({
+            const wireframeModule = device.createShaderModule({
                 code: wireframeWGSL,
             });
-            var litBindGroupLayout = device.createBindGroupLayout({
+            const litBindGroupLayout = device.createBindGroupLayout({
                 label: 'lit bind group layout',
-                entries: [{
-                    binding: 0,
-                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-                    buffer: {},
-                }, ],
+                entries: [
+                    {
+                        binding: 0,
+                        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+                        buffer: {},
+                    },
+                ],
             });
-            var litPipeline;
-
+            let litPipeline;
             function rebuildLitPipeline() {
                 litPipeline = device.createRenderPipeline({
                     label: 'lit pipeline',
@@ -355,28 +336,29 @@
                     }),
                     vertex: {
                         module: litModule,
-                        buffers: [{
-                            arrayStride: 6 * 4,
-                            attributes: [{
-                                    // position
-                                    shaderLocation: 0,
-                                    offset: 0,
-                                    format: 'float32x3',
-                                },
-                                {
-                                    // normal
-                                    shaderLocation: 1,
-                                    offset: 3 * 4,
-                                    format: 'float32x3',
-                                },
-                            ],
-                        }, ],
+                        buffers: [
+                            {
+                                arrayStride: 6 * 4, // position, normal
+                                attributes: [
+                                    {
+                                        // position
+                                        shaderLocation: 0,
+                                        offset: 0,
+                                        format: 'float32x3',
+                                    },
+                                    {
+                                        // normal
+                                        shaderLocation: 1,
+                                        offset: 3 * 4,
+                                        format: 'float32x3',
+                                    },
+                                ],
+                            },
+                        ],
                     },
                     fragment: {
                         module: litModule,
-                        targets: [{
-                            format: presentationFormat
-                        }],
+                        targets: [{ format: presentationFormat }],
                     },
                     primitive: {
                         cullMode: 'back',
@@ -395,7 +377,7 @@
                 });
             }
             rebuildLitPipeline();
-            var wireframePipeline = device.createRenderPipeline({
+            const wireframePipeline = device.createRenderPipeline({
                 label: 'wireframe pipeline',
                 layout: 'auto',
                 vertex: {
@@ -405,9 +387,7 @@
                 fragment: {
                     module: wireframeModule,
                     entryPoint: 'fs',
-                    targets: [{
-                        format: presentationFormat
-                    }],
+                    targets: [{ format: presentationFormat }],
                 },
                 primitive: {
                     topology: 'line-list',
@@ -418,7 +398,7 @@
                     format: depthFormat,
                 },
             });
-            var barycentricCoordinatesBasedWireframePipeline = device.createRenderPipeline({
+            const barycentricCoordinatesBasedWireframePipeline = device.createRenderPipeline({
                 label: 'barycentric coordinates based wireframe pipeline',
                 layout: 'auto',
                 vertex: {
@@ -428,19 +408,21 @@
                 fragment: {
                     module: wireframeModule,
                     entryPoint: 'fsBarycentricCoordinateBasedLines',
-                    targets: [{
-                        format: presentationFormat,
-                        blend: {
-                            color: {
-                                srcFactor: 'one',
-                                dstFactor: 'one-minus-src-alpha',
-                            },
-                            alpha: {
-                                srcFactor: 'one',
-                                dstFactor: 'one-minus-src-alpha',
+                    targets: [
+                        {
+                            format: presentationFormat,
+                            blend: {
+                                color: {
+                                    srcFactor: 'one',
+                                    dstFactor: 'one-minus-src-alpha',
+                                },
+                                alpha: {
+                                    srcFactor: 'one',
+                                    dstFactor: 'one-minus-src-alpha',
+                                },
                             },
                         },
-                    }, ],
+                    ],
                 },
                 primitive: {
                     topology: 'triangle-list',
@@ -451,42 +433,37 @@
                     format: depthFormat,
                 },
             });
-            var objectInfos = [];
-            var numObjects = 200;
-            for (var i = 0; i < numObjects; ++i) {
+            const objectInfos = [];
+            const numObjects = 200;
+            for (let i = 0; i < numObjects; ++i) {
                 // Make a uniform buffer and type array views
                 // for our uniforms.
-                var uniformValues = new Float32Array(16 + 16 + 4);
-                var uniformBuffer = device.createBuffer({
+                const uniformValues = new Float32Array(16 + 16 + 4);
+                const uniformBuffer = device.createBuffer({
                     size: uniformValues.byteLength,
                     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
                 });
-                var kWorldViewProjectionMatrixOffset = 0;
-                var kWorldMatrixOffset = 16;
-                var kColorOffset = 32;
-                var worldViewProjectionMatrixValue = uniformValues.subarray(kWorldViewProjectionMatrixOffset, kWorldViewProjectionMatrixOffset + 16);
-                var worldMatrixValue = uniformValues.subarray(kWorldMatrixOffset, kWorldMatrixOffset + 15);
-                var colorValue = uniformValues.subarray(kColorOffset, kColorOffset + 4);
+                const kWorldViewProjectionMatrixOffset = 0;
+                const kWorldMatrixOffset = 16;
+                const kColorOffset = 32;
+                const worldViewProjectionMatrixValue = uniformValues.subarray(kWorldViewProjectionMatrixOffset, kWorldViewProjectionMatrixOffset + 16);
+                const worldMatrixValue = uniformValues.subarray(kWorldMatrixOffset, kWorldMatrixOffset + 15);
+                const colorValue = uniformValues.subarray(kColorOffset, kColorOffset + 4);
                 colorValue.set(randColor());
-                var model = randElement(models);
+                const model = randElement(models);
                 // Make a bind group for this uniform
-                var litBindGroup = device.createBindGroup({
+                const litBindGroup = device.createBindGroup({
                     layout: litBindGroupLayout,
-                    entries: [{
-                        binding: 0,
-                        resource: {
-                            buffer: uniformBuffer
-                        }
-                    }],
+                    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
                 });
                 // Note: We're making one lineUniformBuffer per object.
                 // This is only because stride might be different per object.
                 // In this sample stride is the same across all objects so
                 // we could have made just a single shared uniform buffer for
                 // these settings.
-                var lineUniformValues = new Float32Array(3 + 1);
-                var lineUniformValuesAsU32 = new Uint32Array(lineUniformValues.buffer);
-                var lineUniformBuffer = device.createBuffer({
+                const lineUniformValues = new Float32Array(3 + 1);
+                const lineUniformValuesAsU32 = new Uint32Array(lineUniformValues.buffer);
+                const lineUniformBuffer = device.createBuffer({
                     size: lineUniformValues.byteLength,
                     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
                 });
@@ -494,134 +471,92 @@
                 // We're creating 2 bindGroups, one for each pipeline.
                 // We could create just one since they are identical. To do
                 // so we'd have to manually create a bindGroupLayout.
-                var wireframeBindGroup = device.createBindGroup({
+                const wireframeBindGroup = device.createBindGroup({
                     layout: wireframePipeline.getBindGroupLayout(0),
-                    entries: [{
-                            binding: 0,
-                            resource: {
-                                buffer: uniformBuffer
-                            }
-                        },
-                        {
-                            binding: 1,
-                            resource: {
-                                buffer: model.vertexBuffer
-                            }
-                        },
-                        {
-                            binding: 2,
-                            resource: {
-                                buffer: model.indexBuffer
-                            }
-                        },
-                        {
-                            binding: 3,
-                            resource: {
-                                buffer: lineUniformBuffer
-                            }
-                        },
+                    entries: [
+                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 1, resource: { buffer: model.vertexBuffer } },
+                        { binding: 2, resource: { buffer: model.indexBuffer } },
+                        { binding: 3, resource: { buffer: lineUniformBuffer } },
                     ],
                 });
-                var barycentricCoordinatesBasedWireframeBindGroup = device.createBindGroup({
+                const barycentricCoordinatesBasedWireframeBindGroup = device.createBindGroup({
                     layout: barycentricCoordinatesBasedWireframePipeline.getBindGroupLayout(0),
-                    entries: [{
-                            binding: 0,
-                            resource: {
-                                buffer: uniformBuffer
-                            }
-                        },
-                        {
-                            binding: 1,
-                            resource: {
-                                buffer: model.vertexBuffer
-                            }
-                        },
-                        {
-                            binding: 2,
-                            resource: {
-                                buffer: model.indexBuffer
-                            }
-                        },
-                        {
-                            binding: 3,
-                            resource: {
-                                buffer: lineUniformBuffer
-                            }
-                        },
+                    entries: [
+                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 1, resource: { buffer: model.vertexBuffer } },
+                        { binding: 2, resource: { buffer: model.indexBuffer } },
+                        { binding: 3, resource: { buffer: lineUniformBuffer } },
                     ],
                 });
                 objectInfos.push({
-                    worldViewProjectionMatrixValue: worldViewProjectionMatrixValue,
-                    worldMatrixValue: worldMatrixValue,
-                    uniformValues: uniformValues,
-                    uniformBuffer: uniformBuffer,
-                    lineUniformValues: lineUniformValues,
-                    lineUniformBuffer: lineUniformBuffer,
-                    litBindGroup: litBindGroup,
+                    worldViewProjectionMatrixValue,
+                    worldMatrixValue,
+                    uniformValues,
+                    uniformBuffer,
+                    lineUniformValues,
+                    lineUniformBuffer,
+                    litBindGroup,
                     wireframeBindGroups: [
                         wireframeBindGroup,
                         barycentricCoordinatesBasedWireframeBindGroup,
                     ],
-                    model: model,
+                    model,
                 });
             }
-            var renderPassDescriptor = {
+            const renderPassDescriptor = {
                 label: 'our basic canvas renderPass',
-                colorAttachments: [{
-                    view: undefined,
-                    clearValue: [0.3, 0.3, 0.3, 1],
-                    loadOp: 'clear',
-                    storeOp: 'store',
-                }, ],
+                colorAttachments: [
+                    {
+                        view: undefined, // <- to be filled out when we render
+                        clearValue: [0.3, 0.3, 0.3, 1],
+                        loadOp: 'clear',
+                        storeOp: 'store',
+                    },
+                ],
                 depthStencilAttachment: {
-                    view: undefined,
+                    view: undefined, // <- to be filled out when we render
                     depthClearValue: 1.0,
                     depthLoadOp: 'clear',
                     depthStoreOp: 'store',
                 },
             };
-            var gui = new dat.gui.GUI();
+            const gui = new dat.gui.GUI();
             gui.add(settings, 'barycentricCoordinatesBased').onChange(addRemoveGUI);
             gui.add(settings, 'lines');
             gui.add(settings, 'models');
             gui.add(settings, 'animate');
-            var guis = [];
-
+            const guis = [];
             function addRemoveGUI() {
-                guis.forEach(function(g) {
-                    return g.remove();
-                });
+                guis.forEach((g) => g.remove());
                 guis.length = 0;
                 if (settings.barycentricCoordinatesBased) {
                     guis.push(gui.add(settings, 'thickness', 0.0, 10).onChange(updateThickness), gui.add(settings, 'alphaThreshold', 0, 1).onChange(updateThickness));
-                } else {
+                }
+                else {
                     guis.push(gui.add(settings, 'depthBias', -3, 3, 1).onChange(rebuildLitPipeline), gui
                         .add(settings, 'depthBiasSlopeScale', -1, 1, 0.05)
                         .onChange(rebuildLitPipeline));
                 }
             }
             addRemoveGUI();
-
             function updateThickness() {
-                objectInfos.forEach(function(_a) {
-                    var lineUniformBuffer = _a.lineUniformBuffer,
-                        lineUniformValues = _a.lineUniformValues;
+                objectInfos.forEach(({ lineUniformBuffer, lineUniformValues }) => {
                     lineUniformValues[1] = settings.thickness;
                     lineUniformValues[2] = settings.alphaThreshold;
                     device.queue.writeBuffer(lineUniformBuffer, 0, lineUniformValues);
                 });
             }
             updateThickness();
-            var depthTexture;
-            var time = 0.0;
-
+            let depthTexture;
+            let time = 0.0;
             function render(ts) {
                 if (settings.animate) {
                     time = ts * 0.001; // convert to seconds;
                 }
                 // Get the current texture from the canvas context and
                 // set it as the texture to render to.
-                var canvasTexture = context.getCurrentTexture();
+                const canvasTexture = context.getCurrentTexture();
                 renderPassDescriptor.colorAttachments[0].view = canvasTexture.createView();
                 // If we don't have a depth texture OR if its size is different
                 // from the canvasTexture when make a new depth texture
@@ -638,31 +573,21 @@
                     });
                 }
                 renderPassDescriptor.depthStencilAttachment.view = depthTexture.createView();
-                var fov = (60 * Math.PI) / 180;
-                var aspect = canvas.clientWidth / canvas.clientHeight;
-                var projection = mat4.perspective(fov, aspect, 0.1, 1000);
-                var view = mat4.lookAt([-300, 0, 300], // eye
-                    [0, 0, 0], // target
-                    [0, 1, 0] // up
+                const fov = (60 * Math.PI) / 180;
+                const aspect = canvas.clientWidth / canvas.clientHeight;
+                const projection = mat4.perspective(fov, aspect, 0.1, 1000);
+                const view = mat4.lookAt([-300, 0, 300], // eye
+                [0, 0, 0], // target
+                [0, 1, 0] // up
                 );
-                var viewProjection = mat4.multiply(projection, view);
+                const viewProjection = mat4.multiply(projection, view);
                 // make a command encoder to start encoding commands
-                var encoder = device.createCommandEncoder();
+                const encoder = device.createCommandEncoder();
                 // make a render pass encoder to encode render specific commands
-                var pass = encoder.beginRenderPass(renderPassDescriptor);
+                const pass = encoder.beginRenderPass(renderPassDescriptor);
                 pass.setPipeline(litPipeline);
-                objectInfos.forEach(function(_a, i) {
-                    var uniformBuffer = _a.uniformBuffer,
-                        uniformValues = _a.uniformValues,
-                        worldViewProjectionMatrixValue = _a.worldViewProjectionMatrixValue,
-                        worldMatrixValue = _a.worldMatrixValue,
-                        litBindGroup = _a.litBindGroup,
-                        _b = _a.model,
-                        vertexBuffer = _b.vertexBuffer,
-                        indexBuffer = _b.indexBuffer,
-                        indexFormat = _b.indexFormat,
-                        vertexCount = _b.vertexCount;
-                    var world = mat4.identity();
+                objectInfos.forEach(({ uniformBuffer, uniformValues, worldViewProjectionMatrixValue, worldMatrixValue, litBindGroup, model: { vertexBuffer, indexBuffer, indexFormat, vertexCount }, }, i) => {
+                    const world = mat4.identity();
                     mat4.translate(world, [0, 0, Math.sin(i * 3.721 + time * 0.1) * 200], world);
                     mat4.rotateX(world, i * 4.567, world);
                     mat4.rotateY(world, i * 2.967, world);
@@ -683,26 +608,20 @@
                     // Note: If we're using the line-list based pipeline then we need to
                     // multiply the vertex count by 2 since we need to emit 6 vertices
                     // for each triangle (3 edges).
-                    var _a = settings.barycentricCoordinatesBased ?
-                        [1, 1, barycentricCoordinatesBasedWireframePipeline] :
-                        [0, 2, wireframePipeline],
-                        bindGroupNdx_1 = _a[0],
-                        countMult_1 = _a[1],
-                        pipeline = _a[2];
+                    const [bindGroupNdx, countMult, pipeline] = settings.barycentricCoordinatesBased
+                        ? [1, 1, barycentricCoordinatesBasedWireframePipeline]
+                        : [0, 2, wireframePipeline];
                     pass.setPipeline(pipeline);
-                    objectInfos.forEach(function(_a) {
-                        var wireframeBindGroups = _a.wireframeBindGroups,
-                            vertexCount = _a.model.vertexCount;
-                        pass.setBindGroup(0, wireframeBindGroups[bindGroupNdx_1]);
-                        pass.draw(vertexCount * countMult_1);
+                    objectInfos.forEach(({ wireframeBindGroups, model: { vertexCount } }) => {
+                        pass.setBindGroup(0, wireframeBindGroups[bindGroupNdx]);
+                        pass.draw(vertexCount * countMult);
                     });
                 }
                 pass.end();
-                var commandBuffer = encoder.finish();
+                const commandBuffer = encoder.finish();
                 device.queue.submit([commandBuffer]);
                 requestAnimationFrame(render);
             }
-            
             requestAnimationFrame(render);
         </script>
     </body>
