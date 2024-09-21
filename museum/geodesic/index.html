@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <title>Geodesic</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.9/dat.gui.min.js"></script>
+        <style>
+            :root {
+                color-scheme: light dark;
+            }
+            html, body {
+                margin: 0;
+                /* remove default margin */
+                height: 100%;
+                /* make body fill the browser window */
+                display: flex;
+                place-content: center center;
+            }
+            canvas {
+                width: 600px;
+                height: 600px;
+                max-width: 100%;
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas></canvas>
+        <script type="module">
+            import { mat4, vec3 } from 'https://wgpu-matrix.org/dist/3.x/wgpu-matrix.module.js';
+            import { quitIfWebGPUNotAvailable } from './util.js';
+
+            //cube.ts
+            const cubeVertexSize = 4 * 10; // Byte size of one cube vertex.
+            const cubePositionOffset = 0;
+            const cubeUVOffset = 4 * 8;
+            const cubeVertexCount = 36;
+            // prettier-ignore
+            const cubeVertexArray = new Float32Array([
+                // float4 position, float4 color, float2 uv,
+                1, -1, 1, 1, 1, 0, 1, 1, 0, 1,
+                -1, -1, 1, 1, 0, 0, 1, 1, 1, 1,
+                -1, -1, -1, 1, 0, 0, 0, 1, 1, 0,
+                1, -1, -1, 1, 1, 0, 0, 1, 0, 0,
+                1, -1, 1, 1, 1, 0, 1, 1, 0, 1,
+                -1, -1, -1, 1, 0, 0, 0, 1, 1, 0,
+                1, 1, 1, 1, 1, 1, 1, 1, 0, 1,
+                1, -1, 1, 1, 1, 0, 1, 1, 1, 1,
+                1, -1, -1, 1, 1, 0, 0, 1, 1, 0,
+                1, 1, -1, 1, 1, 1, 0, 1, 0, 0,
+                1, 1, 1, 1, 1, 1, 1, 1, 0, 1,
+                1, -1, -1, 1, 1, 0, 0, 1, 1, 0,
+                -1, 1, 1, 1, 0, 1, 1, 1, 0, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, -1, 1, 1, 1, 0, 1, 1, 0,
+                -1, 1, -1, 1, 0, 1, 0, 1, 0, 0,
+                -1, 1, 1, 1, 0, 1, 1, 1, 0, 1,
+                1, 1, -1, 1, 1, 1, 0, 1, 1, 0,
+                -1, -1, 1, 1, 0, 0, 1, 1, 0, 1,
+                -1, 1, 1, 1, 0, 1, 1, 1, 1, 1,
+                -1, 1, -1, 1, 0, 1, 0, 1, 1, 0,
+                -1, -1, -1, 1, 0, 0, 0, 1, 0, 0,
+                -1, -1, 1, 1, 0, 0, 1, 1, 0, 1,
+                -1, 1, -1, 1, 0, 1, 0, 1, 1, 0,
+                1, 1, 1, 1, 1, 1, 1, 1, 0, 1,
+                -1, 1, 1, 1, 0, 1, 1, 1, 1, 1,
+                -1, -1, 1, 1, 0, 0, 1, 1, 1, 0,
+                -1, -1, 1, 1, 0, 0, 1, 1, 1, 0,
+                1, -1, 1, 1, 1, 0, 1, 1, 0, 0,
+                1, 1, 1, 1, 1, 1, 1, 1, 0, 1,
+                1, -1, -1, 1, 1, 0, 0, 1, 0, 1,
+                -1, -1, -1, 1, 0, 0, 0, 1, 1, 1,
+                -1, 1, -1, 1, 0, 1, 0, 1, 1, 0,
+                1, 1, -1, 1, 1, 1, 0, 1, 0, 0,
+                1, -1, -1, 1, 1, 0, 0, 1, 0, 1,
+                -1, 1, -1, 1, 0, 1, 0, 1, 1, 0,
+            ]);
+
+            var cubeWGSL = `struct Uniforms {
+              modelViewProjectionMatrix : mat4x4f,
+            }
+
+            @group(0) @binding(0) var<uniform> uniforms : Uniforms;
+            @group(0) @binding(1) var mySampler: sampler;
+            @group(0) @binding(2) var myTexture: texture_2d<f32>;
+
+            struct VertexOutput {
+              @builtin(position) Position : vec4f,
+              @location(0) fragUV : vec2f,
+            }
+
+            @vertex
+            fn vertex_main(
+              @location(0) position : vec4f,
+              @location(1) uv : vec2f
+            ) -> VertexOutput {
+              return VertexOutput(uniforms.modelViewProjectionMatrix * position, uv);
+            }
+
+            @fragment
+            fn fragment_main(@location(0) fragUV: vec2f) -> @location(0) vec4f {
+              return textureSample(myTexture, mySampler, fragUV);
+            }
+            `;
+
+
+            //camera.ts
+
+            // Note: The code in this file does not use the 'dst' output parameter of functions in the
+            // 'wgpu-matrix' library, so produces many temporary vectors and matrices.
+            // This is intentional, as this sample prefers readability over performance.
+            // The common functionality between camera implementations
+            class CameraBase {
+                // The camera matrix
+                matrix_ = new Float32Array([
+                    1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
+                ]);
+                // The calculated view matrix
+                view_ = mat4.create();
+                // Aliases to column vectors of the matrix
+                right_ = new Float32Array(this.matrix_.buffer, 4 * 0, 4);
+                up_ = new Float32Array(this.matrix_.buffer, 4 * 4, 4);
+                back_ = new Float32Array(this.matrix_.buffer, 4 * 8, 4);
+                position_ = new Float32Array(this.matrix_.buffer, 4 * 12, 4);
+                // Returns the camera matrix
+                get matrix() {
+                    return this.matrix_;
+                }
+                // Assigns `mat` to the camera matrix
+                set matrix(mat) {
+                    mat4.copy(mat, this.matrix_);
+                }
+                // Returns the camera view matrix
+                get view() {
+                    return this.view_;
+                }
+                // Assigns `mat` to the camera view
+                set view(mat) {
+                    mat4.copy(mat, this.view_);
+                }
+                // Returns column vector 0 of the camera matrix
+                get right() {
+                    return this.right_;
+                }
+                // Assigns `vec` to the first 3 elements of column vector 0 of the camera matrix
+                set right(vec) {
+                    vec3.copy(vec, this.right_);
+                }
+                // Returns column vector 1 of the camera matrix
+                get up() {
+                    return this.up_;
+                }
+                // Assigns `vec` to the first 3 elements of column vector 1 of the camera matrix
+                set up(vec) {
+                    vec3.copy(vec, this.up_);
+                }
+                // Returns column vector 2 of the camera matrix
+                get back() {
+                    return this.back_;
+                }
+                // Assigns `vec` to the first 3 elements of column vector 2 of the camera matrix
+                set back(vec) {
+                    vec3.copy(vec, this.back_);
+                }
+                // Returns column vector 3 of the camera matrix
+                get position() {
+                    return this.position_;
+                }
+                // Assigns `vec` to the first 3 elements of column vector 3 of the camera matrix
+                set position(vec) {
+                    vec3.copy(vec, this.position_);
+                }
+            }
+            // WASDCamera is a camera implementation that behaves similar to first-person-shooter PC games.
+            class WASDCamera extends CameraBase {
+                // The camera absolute pitch angle
+                pitch = 0;
+                // The camera absolute yaw angle
+                yaw = 0;
+                // The movement veloicty
+                velocity_ = vec3.create();
+                // Speed multiplier for camera movement
+                movementSpeed = 10;
+                // Speed multiplier for camera rotation
+                rotationSpeed = 1;
+                // Movement velocity drag coeffient [0 .. 1]
+                // 0: Continues forever
+                // 1: Instantly stops moving
+                frictionCoefficient = 0.99;
+                // Returns velocity vector
+                get velocity() {
+                    return this.velocity_;
+                }
+                // Assigns `vec` to the velocity vector
+                set velocity(vec) {
+                    vec3.copy(vec, this.velocity_);
+                }
+                // Construtor
+                constructor(options) {
+                    super();
+                    if (options && (options.position || options.target)) {
+                        const position = options.position ?? vec3.create(0, 0, -5);
+                        const target = options.target ?? vec3.create(0, 0, 0);
+                        const back = vec3.normalize(vec3.sub(position, target));
+                        this.recalculateAngles(back);
+                        this.position = position;
+                    }
+                }
+                // Returns the camera matrix
+                get matrix() {
+                    return super.matrix;
+                }
+                // Assigns `mat` to the camera matrix, and recalcuates the camera angles
+                set matrix(mat) {
+                    super.matrix = mat;
+                    this.recalculateAngles(this.back);
+                }
+                update(deltaTime, input) {
+                    const sign = (positive, negative) => (positive ? 1 : 0) - (negative ? 1 : 0);
+                    // Apply the delta rotation to the pitch and yaw angles
+                    this.yaw -= input.analog.x * deltaTime * this.rotationSpeed;
+                    this.pitch -= input.analog.y * deltaTime * this.rotationSpeed;
+                    // Wrap yaw between [0° .. 360°], just to prevent large accumulation.
+                    this.yaw = mod(this.yaw, Math.PI * 2);
+                    // Clamp pitch between [-90° .. +90°] to prevent somersaults.
+                    this.pitch = clamp(this.pitch, -Math.PI / 2, Math.PI / 2);
+                    // Save the current position, as we're about to rebuild the camera matrix.
+                    const position = vec3.copy(this.position);
+                    // Reconstruct the camera's rotation, and store into the camera matrix.
+                    super.matrix = mat4.rotateX(mat4.rotationY(this.yaw), this.pitch);
+                    // Calculate the new target velocity
+                    const digital = input.digital;
+                    const deltaRight = sign(digital.right, digital.left);
+                    const deltaUp = sign(digital.up, digital.down);
+                    const targetVelocity = vec3.create();
+                    const deltaBack = sign(digital.backward, digital.forward);
+                    vec3.addScaled(targetVelocity, this.right, deltaRight, targetVelocity);
+                    vec3.addScaled(targetVelocity, this.up, deltaUp, targetVelocity);
+                    vec3.addScaled(targetVelocity, this.back, deltaBack, targetVelocity);
+                    vec3.normalize(targetVelocity, targetVelocity);
+                    vec3.mulScalar(targetVelocity, this.movementSpeed, targetVelocity);
+                    // Mix new target velocity
+                    this.velocity = lerp(targetVelocity, this.velocity, Math.pow(1 - this.frictionCoefficient, deltaTime));
+                    // Integrate velocity to calculate new position
+                    this.position = vec3.addScaled(position, this.velocity, deltaTime);
+                    // Invert the camera matrix to build the view matrix
+                    this.view = mat4.invert(this.matrix);
+                    return this.view;
+                }
+                // Recalculates the yaw and pitch values from a directional vector
+                recalculateAngles(dir) {
+                    this.yaw = Math.atan2(dir[0], dir[2]);
+                    this.pitch = -Math.asin(dir[1]);
+                }
+            }
+            // ArcballCamera implements a basic orbiting camera around the world origin
+            class ArcballCamera extends CameraBase {
+                // The camera distance from the target
+                distance = 0;
+                // The current angular velocity
+                angularVelocity = 0;
+                // The current rotation axis
+                axis_ = vec3.create();
+                // Returns the rotation axis
+                get axis() {
+                    return this.axis_;
+                }
+                // Assigns `vec` to the rotation axis
+                set axis(vec) {
+                    vec3.copy(vec, this.axis_);
+                }
+                // Speed multiplier for camera rotation
+                rotationSpeed = 1;
+                // Speed multiplier for camera zoom
+                zoomSpeed = 0.1;
+                // Rotation velocity drag coeffient [0 .. 1]
+                // 0: Spins forever
+                // 1: Instantly stops spinning
+                frictionCoefficient = 0.999;
+                // Construtor
+                constructor(options) {
+                    super();
+                    if (options && options.position) {
+                        this.position = options.position;
+                        this.distance = vec3.len(this.position);
+                        this.back = vec3.normalize(this.position);
+                        this.recalcuateRight();
+                        this.recalcuateUp();
+                    }
+                }
+                // Returns the camera matrix
+                get matrix() {
+                    return super.matrix;
+                }
+                // Assigns `mat` to the camera matrix, and recalcuates the distance
+                set matrix(mat) {
+                    super.matrix = mat;
+                    this.distance = vec3.len(this.position);
+                }
+                update(deltaTime, input) {
+                    const epsilon = 0.0000001;
+                    if (input.analog.touching) {
+                        // Currently being dragged.
+                        this.angularVelocity = 0;
+                    }
+                    else {
+                        // Dampen any existing angular velocity
+                        this.angularVelocity *= Math.pow(1 - this.frictionCoefficient, deltaTime);
+                    }
+                    // Calculate the movement vector
+                    const movement = vec3.create();
+                    vec3.addScaled(movement, this.right, input.analog.x, movement);
+                    vec3.addScaled(movement, this.up, -input.analog.y, movement);
+                    // Cross the movement vector with the view direction to calculate the rotation axis x magnitude
+                    const crossProduct = vec3.cross(movement, this.back);
+                    // Calculate the magnitude of the drag
+                    const magnitude = vec3.len(crossProduct);
+                    if (magnitude > epsilon) {
+                        // Normalize the crossProduct to get the rotation axis
+                        this.axis = vec3.scale(crossProduct, 1 / magnitude);
+                        // Remember the current angular velocity. This is used when the touch is released for a fling.
+                        this.angularVelocity = magnitude * this.rotationSpeed;
+                    }
+                    // The rotation around this.axis to apply to the camera matrix this update
+                    const rotationAngle = this.angularVelocity * deltaTime;
+                    if (rotationAngle > epsilon) {
+                        // Rotate the matrix around axis
+                        // Note: The rotation is not done as a matrix-matrix multiply as the repeated multiplications
+                        // will quickly introduce substantial error into the matrix.
+                        this.back = vec3.normalize(rotate(this.back, this.axis, rotationAngle));
+                        this.recalcuateRight();
+                        this.recalcuateUp();
+                    }
+                    // recalculate `this.position` from `this.back` considering zoom
+                    if (input.analog.zoom !== 0) {
+                        this.distance *= 1 + input.analog.zoom * this.zoomSpeed;
+                    }
+                    this.position = vec3.scale(this.back, this.distance);
+                    // Invert the camera matrix to build the view matrix
+                    this.view = mat4.invert(this.matrix);
+                    return this.view;
+                }
+                // Assigns `this.right` with the cross product of `this.up` and `this.back`
+                recalcuateRight() {
+                    this.right = vec3.normalize(vec3.cross(this.up, this.back));
+                }
+                // Assigns `this.up` with the cross product of `this.back` and `this.right`
+                recalcuateUp() {
+                    this.up = vec3.normalize(vec3.cross(this.back, this.right));
+                }
+            }
+            // Returns `x` clamped between [`min` .. `max`]
+            function clamp(x, min, max) {
+                return Math.min(Math.max(x, min), max);
+            }
+            // Returns `x` float-modulo `div`
+            function mod(x, div) {
+                return x - Math.floor(Math.abs(x) / div) * div * Math.sign(x);
+            }
+            // Returns `vec` rotated `angle` radians around `axis`
+            function rotate(vec, axis, angle) {
+                return vec3.transformMat4Upper3x3(vec, mat4.rotation(axis, angle));
+            }
+            // Returns the linear interpolation between 'a' and 'b' using 's'
+            function lerp(a, b, s) {
+                return vec3.addScaled(a, vec3.sub(b, a), s);
+            }
+
+
+
+            //input.ts
+
+            // createInputHandler returns an InputHandler by attaching event handlers to the window and canvas.
+            function createInputHandler(window, canvas) {
+                const digital = {
+                    forward: false,
+                    backward: false,
+                    left: false,
+                    right: false,
+                    up: false,
+                    down: false,
+                };
+                const analog = {
+                    x: 0,
+                    y: 0,
+                    zoom: 0,
+                };
+                let mouseDown = false;
+                const setDigital = (e, value) => {
+                    switch (e.code) {
+                        case 'KeyW':
+                            digital.forward = value;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            break;
+                        case 'KeyS':
+                            digital.backward = value;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            break;
+                        case 'KeyA':
+                            digital.left = value;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            break;
+                        case 'KeyD':
+                            digital.right = value;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            break;
+                        case 'Space':
+                            digital.up = value;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            break;
+                        case 'ShiftLeft':
+                        case 'ControlLeft':
+                        case 'KeyC':
+                            digital.down = value;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            break;
+                    }
+                };
+                window.addEventListener('keydown', (e) => setDigital(e, true));
+                window.addEventListener('keyup', (e) => setDigital(e, false));
+                canvas.style.touchAction = 'pinch-zoom';
+                canvas.addEventListener('pointerdown', () => {
+                    mouseDown = true;
+                });
+                canvas.addEventListener('pointerup', () => {
+                    mouseDown = false;
+                });
+                canvas.addEventListener('pointermove', (e) => {
+                    mouseDown = e.pointerType == 'mouse' ? (e.buttons & 1) !== 0 : true;
+                    if (mouseDown) {
+                        analog.x += e.movementX;
+                        analog.y += e.movementY;
+                    }
+                });
+                canvas.addEventListener('wheel', (e) => {
+                    mouseDown = (e.buttons & 1) !== 0;
+                    if (mouseDown) {
+                        // The scroll value varies substantially between user agents / browsers.
+                        // Just use the sign.
+                        analog.zoom += Math.sign(e.deltaY);
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                }, { passive: false });
+                return () => {
+                    const out = {
+                        digital,
+                        analog: {
+                            x: analog.x,
+                            y: analog.y,
+                            zoom: analog.zoom,
+                            touching: mouseDown,
+                        },
+                    };
+                    // Clear the analog values, as these accumulate.
+                    analog.x = 0;
+                    analog.y = 0;
+                    analog.zoom = 0;
+                    return out;
+                };
+            }
+
+
+            //main.ts
+            const canvas = document.querySelector('canvas');
+            // The input handler
+            const inputHandler = createInputHandler(window, canvas);
+            // The camera types
+            const initialCameraPosition = vec3.create(3, 2, 5);
+            const cameras = {
+                arcball: new ArcballCamera({ position: initialCameraPosition }),
+                WASD: new WASDCamera({ position: initialCameraPosition }),
+            };
+            const gui = new dat.gui.GUI();
+            // GUI parameters
+            const params = {
+                type: 'arcball',
+            };
+            // Callback handler for camera mode
+            let oldCameraType = params.type;
+            gui.add(params, 'type', ['arcball', 'WASD']).onChange(() => {
+                // Copy the camera matrix from old to new
+                const newCameraType = params.type;
+                cameras[newCameraType].matrix = cameras[oldCameraType].matrix;
+                oldCameraType = newCameraType;
+            });
+            const adapter = await navigator.gpu?.requestAdapter();
+            const device = await adapter?.requestDevice();
+            quitIfWebGPUNotAvailable(adapter, device);
+            const context = canvas.getContext('webgpu');
+            const devicePixelRatio = window.devicePixelRatio;
+            canvas.width = canvas.clientWidth * devicePixelRatio;
+            canvas.height = canvas.clientHeight * devicePixelRatio;
+            const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+            context.configure({
+                device,
+                format: presentationFormat,
+                alphaMode: 'premultiplied',
+            });
+            // Create a vertex buffer from the cube data.
+            const verticesBuffer = device.createBuffer({
+                size: cubeVertexArray.byteLength,
+                usage: GPUBufferUsage.VERTEX,
+                mappedAtCreation: true,
+            });
+            new Float32Array(verticesBuffer.getMappedRange()).set(cubeVertexArray);
+            verticesBuffer.unmap();
+            const pipeline = device.createRenderPipeline({
+                layout: 'auto',
+                vertex: {
+                    module: device.createShaderModule({
+                        code: cubeWGSL,
+                    }),
+                    buffers: [
+                        {
+                            arrayStride: cubeVertexSize,
+                            attributes: [
+                                {
+                                    // position
+                                    shaderLocation: 0,
+                                    offset: cubePositionOffset,
+                                    format: 'float32x4',
+                                },
+                                {
+                                    // uv
+                                    shaderLocation: 1,
+                                    offset: cubeUVOffset,
+                                    format: 'float32x2',
+                                },
+                            ],
+                        },
+                    ],
+                },
+                fragment: {
+                    module: device.createShaderModule({
+                        code: cubeWGSL,
+                    }),
+                    targets: [
+                        {
+                            format: presentationFormat,
+                        },
+                    ],
+                },
+                primitive: {
+                    topology: 'triangle-list',
+                    cullMode: 'back',
+                },
+                depthStencil: {
+                    depthWriteEnabled: true,
+                    depthCompare: 'less',
+                    format: 'depth24plus',
+                },
+            });
+            const depthTexture = device.createTexture({
+                size: [canvas.width, canvas.height],
+                format: 'depth24plus',
+                usage: GPUTextureUsage.RENDER_ATTACHMENT,
+            });
+            const uniformBufferSize = 4 * 16; // 4x4 matrix
+            const uniformBuffer = device.createBuffer({
+                size: uniformBufferSize,
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            });
+            // Fetch the image and upload it into a GPUTexture.
+            let cubeTexture;
+            {
+                const response = await fetch('./Di-3d.png');
+                const imageBitmap = await createImageBitmap(await response.blob());
+                cubeTexture = device.createTexture({
+                    size: [imageBitmap.width, imageBitmap.height, 1],
+                    format: 'rgba8unorm',
+                    usage: GPUTextureUsage.TEXTURE_BINDING |
+                        GPUTextureUsage.COPY_DST |
+                        GPUTextureUsage.RENDER_ATTACHMENT,
+                });
+                device.queue.copyExternalImageToTexture({ source: imageBitmap }, { texture: cubeTexture }, [imageBitmap.width, imageBitmap.height]);
+            }
+            // Create a sampler with linear filtering for smooth interpolation.
+            const sampler = device.createSampler({
+                magFilter: 'linear',
+                minFilter: 'linear',
+            });
+            const uniformBindGroup = device.createBindGroup({
+                layout: pipeline.getBindGroupLayout(0),
+                entries: [
+                    {
+                        binding: 0,
+                        resource: {
+                            buffer: uniformBuffer,
+                        },
+                    },
+                    {
+                        binding: 1,
+                        resource: sampler,
+                    },
+                    {
+                        binding: 2,
+                        resource: cubeTexture.createView(),
+                    },
+                ],
+            });
+            const renderPassDescriptor = {
+                colorAttachments: [
+                    {
+                        view: undefined, // Assigned later
+                        clearValue: [0.5, 0.5, 0.5, 1.0],
+                        loadOp: 'clear',
+                        storeOp: 'store',
+                    },
+                ],
+                depthStencilAttachment: {
+                    view: depthTexture.createView(),
+                    depthClearValue: 1.0,
+                    depthLoadOp: 'clear',
+                    depthStoreOp: 'store',
+                },
+            };
+            const aspect = canvas.width / canvas.height;
+            const projectionMatrix = mat4.perspective((2 * Math.PI) / 5, aspect, 1, 100.0);
+            const modelViewProjectionMatrix = mat4.create();
+            function getModelViewProjectionMatrix(deltaTime) {
+                const camera = cameras[params.type];
+                const viewMatrix = camera.update(deltaTime, inputHandler());
+                mat4.multiply(projectionMatrix, viewMatrix, modelViewProjectionMatrix);
+                return modelViewProjectionMatrix;
+            }
+            let lastFrameMS = Date.now();
+            function frame() {
+                const now = Date.now();
+                const deltaTime = (now - lastFrameMS) / 1000;
+                lastFrameMS = now;
+                const modelViewProjection = getModelViewProjectionMatrix(deltaTime);
+                device.queue.writeBuffer(uniformBuffer, 0, modelViewProjection.buffer, modelViewProjection.byteOffset, modelViewProjection.byteLength);
+                renderPassDescriptor.colorAttachments[0].view = context
+                    .getCurrentTexture()
+                    .createView();
+                const commandEncoder = device.createCommandEncoder();
+                const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+                passEncoder.setPipeline(pipeline);
+                passEncoder.setBindGroup(0, uniformBindGroup);
+                passEncoder.setVertexBuffer(0, verticesBuffer);
+                passEncoder.draw(cubeVertexCount);
+                passEncoder.end();
+                device.queue.submit([commandEncoder.finish()]);
+                requestAnimationFrame(frame);
+            }
+            requestAnimationFrame(frame);
+        </script>
+    </body>
+</html>
