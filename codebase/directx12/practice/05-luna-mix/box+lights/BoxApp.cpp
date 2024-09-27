@@ -51,6 +51,7 @@ private:
     void BuildRootSignature();
     void BuildShadersAndInputLayout();
     void BuildBoxGeometry();
+    void BuildMaterials();
     void BuildPSO();
 
 private:
@@ -61,6 +62,11 @@ private:
     std::unique_ptr<UploadBuffer<ObjectConstants>> mObjectCB = nullptr;
 
 	std::unique_ptr<MeshGeometry> mBoxGeo = nullptr;
+
+    std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> mGeometries;
+    std::unordered_map<std::string, std::unique_ptr<Material>> mMaterials;
+    std::unordered_map<std::string, std::unique_ptr<Texture>> mTextures;
+    std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
 
     ComPtr<ID3DBlob> mvsByteCode = nullptr;
     ComPtr<ID3DBlob> mpsByteCode = nullptr;
@@ -125,6 +131,7 @@ bool BoxApp::Initialize()
     BuildRootSignature();
     BuildShadersAndInputLayout();
     BuildBoxGeometry();
+    BuildMaterials();
     BuildPSO();
 
     // Execute the initialization commands.
@@ -460,4 +467,25 @@ void BoxApp::BuildPSO()
     psoDesc.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
     psoDesc.DSVFormat = mDepthStencilFormat;
     ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&mPSO)));
+}
+
+void BoxApp::BuildMaterials() {
+    auto bricks0 = std::make_unique<Material>();
+    bricks0->Name = "bricks0";
+    bricks0->MatCBIndex = 0;
+    bricks0->DiffuseSrvHeapIndex = 0;
+    bricks0->DiffuseAlbedo = XMFLOAT4(Colors::ForestGreen);
+    bricks0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
+    bricks0->Roughness = 0.1f;
+
+    auto stone0 = std::make_unique<Material>();
+    stone0->Name = "stone0";
+    stone0->MatCBIndex = 1;
+    stone0->DiffuseSrvHeapIndex = 1;
+    stone0->DiffuseAlbedo = XMFLOAT4(Colors::LightSteelBlue);
+    stone0->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
+    stone0->Roughness = 0.3f;
+
+    mMaterials["bricks0"] = std::move(bricks0);
+    mMaterials["stone0"] = std::move(stone0);
 }
