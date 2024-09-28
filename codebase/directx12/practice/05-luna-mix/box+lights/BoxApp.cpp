@@ -1,13 +1,3 @@
-//***************************************************************************************
-// BoxApp.cpp by Frank Luna (C) 2015 All Rights Reserved.
-//
-// Shows how to draw a box in Direct3D 12.
-//
-// Controls:
-//   Hold the left mouse button down and move the mouse to rotate.
-//   Hold the right mouse button down and move the mouse to zoom in and out.
-//***************************************************************************************
-
 #include "../Common/d3dApp.h"
 #include "../Common/MathHelper.h"
 #include "../Common/UploadBuffer.h"
@@ -16,19 +6,18 @@ using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 
-struct Vertex
-{
+const int gNumFrameResources = 3;
+
+struct Vertex {
     XMFLOAT3 Pos;
     XMFLOAT4 Color;
 };
 
-struct ObjectConstants
-{
+struct ObjectConstants {
     XMFLOAT4X4 WorldViewProj = MathHelper::Identity4x4();
 };
 
-class BoxApp : public D3DApp
-{
+class BoxApp : public D3DApp {
 public:
 	BoxApp(HINSTANCE hInstance);
     BoxApp(const BoxApp& rhs) = delete;
@@ -51,12 +40,17 @@ private:
     void BuildRootSignature();
     void BuildShadersAndInputLayout();
     void BuildBoxGeometry();
+    void BuildMaterials();
     void BuildPSO();
 
 private:
     
     ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
     ComPtr<ID3D12DescriptorHeap> mCbvHeap = nullptr;
+
+    std::unordered_map<std::string, std::unique_ptr<Material>> mMaterials;
+    std::unordered_map<std::string, std::unique_ptr<Texture>> mTextures;
+    std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
 
     std::unique_ptr<UploadBuffer<ObjectConstants>> mObjectCB = nullptr;
 
@@ -125,6 +119,7 @@ bool BoxApp::Initialize()
     BuildRootSignature();
     BuildShadersAndInputLayout();
     BuildBoxGeometry();
+	BuildMaterials();
     BuildPSO();
 
     // Execute the initialization commands.
@@ -351,8 +346,8 @@ void BoxApp::BuildShadersAndInputLayout()
 {
     HRESULT hr = S_OK;
     
-	mvsByteCode = d3dUtil::CompileShader(L"Shaders\\default.hlsl", nullptr, "VS", "vs_5_0");
-	mpsByteCode = d3dUtil::CompileShader(L"Shaders\\default.hlsl", nullptr, "PS", "ps_5_0");
+	mvsByteCode = d3dUtil::CompileShader(L"Shaders\\default1.hlsl", nullptr, "VS", "vs_5_0");
+	mpsByteCode = d3dUtil::CompileShader(L"Shaders\\default1.hlsl", nullptr, "PS", "ps_5_0");
 
     mInputLayout =
     {
@@ -460,4 +455,43 @@ void BoxApp::BuildPSO()
     psoDesc.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
     psoDesc.DSVFormat = mDepthStencilFormat;
     ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&mPSO)));
+}
+
+void BoxApp::BuildMaterials() {
+	auto bricks0 = std::make_unique<Material>();
+	bricks0->Name = "bricks0";
+	bricks0->MatCBIndex = 0;
+	bricks0->DiffuseSrvHeapIndex = 0;
+	bricks0->DiffuseAlbedo = XMFLOAT4(Colors::ForestGreen);
+	bricks0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
+	bricks0->Roughness = 0.1f;
+
+	auto stone0 = std::make_unique<Material>();
+	stone0->Name = "stone0";
+	stone0->MatCBIndex = 1;
+	stone0->DiffuseSrvHeapIndex = 1;
+	stone0->DiffuseAlbedo = XMFLOAT4(Colors::LightSteelBlue);
+	stone0->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
+	stone0->Roughness = 0.3f;
+
+	auto tile0 = std::make_unique<Material>();
+	tile0->Name = "tile0";
+	tile0->MatCBIndex = 2;
+	tile0->DiffuseSrvHeapIndex = 2;
+	tile0->DiffuseAlbedo = XMFLOAT4(Colors::LightGray);
+	tile0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
+	tile0->Roughness = 0.2f;
+
+	auto skullMat = std::make_unique<Material>();
+	skullMat->Name = "skullMat";
+	skullMat->MatCBIndex = 3;
+	skullMat->DiffuseSrvHeapIndex = 3;
+	skullMat->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
+	skullMat->Roughness = 0.3f;
+
+	mMaterials["bricks0"] = std::move(bricks0);
+	mMaterials["stone0"] = std::move(stone0);
+	mMaterials["tile0"] = std::move(tile0);
+	mMaterials["skullMat"] = std::move(skullMat);
 }
