@@ -27,12 +27,15 @@ private:
     virtual void OnMouseUp(WPARAM btnState, int x, int y)override;
     virtual void OnMouseMove(WPARAM btnState, int x, int y)override;
 
+	void UpdateMainPassCB(const GameTimer& gt);
+
     void BuildDescriptorHeaps();
 	void BuildConstantBuffers();
     void BuildRootSignature();
     void BuildShadersAndInputLayout();
     void BuildBoxGeometry();
     void BuildMaterials();
+	void BuildFrameResources();
     void BuildPSO();
 
 private:
@@ -58,6 +61,8 @@ private:
     std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;
 
     ComPtr<ID3D12PipelineState> mPSO = nullptr;
+
+	PassConstants mMainPassCB;
 
     XMFLOAT4X4 mWorld = MathHelper::Identity4x4();
     XMFLOAT4X4 mView = MathHelper::Identity4x4();
@@ -114,6 +119,7 @@ bool BoxApp::Initialize()
     BuildShadersAndInputLayout();
     BuildBoxGeometry();
 	BuildMaterials();
+	BuildFrameResources();
     BuildPSO();
 
     // Execute the initialization commands.
@@ -488,4 +494,44 @@ void BoxApp::BuildMaterials() {
 	mMaterials["stone0"] = std::move(stone0);
 	mMaterials["tile0"] = std::move(tile0);
 	mMaterials["skullMat"] = std::move(skullMat);
+}
+
+void BoxApp::BuildFrameResources() {
+    for (int i = 0; i < gNumFrameResources; ++i) {
+        mFrameResources.push_back(std::make_unique<FrameResource>(md3dDevice.Get(), 1, 1, (UINT)mMaterials.size()));
+    }
+}
+
+void BoxApp::UpdateMainPassCB(const GameTimer& gt) {
+	XMMATRIX view = XMLoadFloat4x4(&mView);
+	XMMATRIX proj = XMLoadFloat4x4(&mProj);
+
+	XMMATRIX viewProj = XMMatrixMultiply(view, proj);
+	XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
+	XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
+	XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
+
+	XMStoreFloat4x4(&mMainPassCB.View, XMMatrixTranspose(view));
+	XMStoreFloat4x4(&mMainPassCB.InvView, XMMatrixTranspose(invView));
+	XMStoreFloat4x4(&mMainPassCB.Proj, XMMatrixTranspose(proj));
+	XMStoreFloat4x4(&mMainPassCB.InvProj, XMMatrixTranspose(invProj));
+	XMStoreFloat4x4(&mMainPassCB.ViewProj, XMMatrixTranspose(viewProj));
+	XMStoreFloat4x4(&mMainPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
+	//mMainPassCB.EyePosW = mEyePos;
+	mMainPassCB.RenderTargetSize = XMFLOAT2((float)mClientWidth, (float)mClientHeight);
+	mMainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / mClientWidth, 1.0f / mClientHeight);
+	mMainPassCB.NearZ = 1.0f;
+	mMainPassCB.FarZ = 1000.0f;
+	mMainPassCB.TotalTime = gt.TotalTime();
+	mMainPassCB.DeltaTime = gt.DeltaTime();
+	mMainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
+	mMainPassCB.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
+	mMainPassCB.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
+	mMainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
+	mMainPassCB.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
+	mMainPassCB.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
+	mMainPassCB.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
+
+	auto currPassCB = mCurrFrameResource->PassCB.get();
+	currPassCB->CopyData(0, mMainPassCB);
 }

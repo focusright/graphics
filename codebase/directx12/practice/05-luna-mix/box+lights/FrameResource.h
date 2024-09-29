@@ -4,14 +4,12 @@
 #include "../Common/MathHelper.h"
 #include "../Common/UploadBuffer.h"
 
-struct ObjectConstants
-{
+struct ObjectConstants {
     DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
 };
 
-struct PassConstants
-{
+struct PassConstants {
     DirectX::XMFLOAT4X4 View = MathHelper::Identity4x4();
     DirectX::XMFLOAT4X4 InvView = MathHelper::Identity4x4();
     DirectX::XMFLOAT4X4 Proj = MathHelper::Identity4x4();
@@ -36,16 +34,14 @@ struct PassConstants
     Light Lights[MaxLights];
 };
 
-struct Vertex
-{
+struct Vertex {
     DirectX::XMFLOAT3 Pos;
     DirectX::XMFLOAT3 Normal;
 };
 
 // Stores the resources needed for the CPU to build the command lists
 // for a frame.  
-struct FrameResource
-{
+struct FrameResource {
 public:
     
     FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount, UINT materialCount);
