@@ -11,7 +11,7 @@
 #include "LightingUtil.hlsl"
 
 cbuffer cbPerObject : register(b0) {
-	float4x4 gWorldViewProj; 
+	float4x4 gWorld;
 };
 
 cbuffer cbMaterial : register(b1) {
@@ -52,7 +52,7 @@ struct VertexOut {
 
 VertexOut VS(VertexIn vin) {
 	VertexOut vout;
-	vout.PosH = mul(float4(vin.PosL, 1.0f), gWorldViewProj);
+	vout.PosH = mul(float4(vin.PosL, 1.0f), gWorld);
     vout.Color = vin.Color;
     return vout;
 }
