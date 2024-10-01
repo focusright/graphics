@@ -272,19 +272,16 @@ void BoxApp::OnMouseMove(WPARAM btnState, int x, int y)
     mLastMousePos.y = y;
 }
 
-void BoxApp::BuildDescriptorHeaps()
-{
+void BoxApp::BuildDescriptorHeaps() {
     D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc;
     cbvHeapDesc.NumDescriptors = 1;
     cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	cbvHeapDesc.NodeMask = 0;
-    ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&cbvHeapDesc,
-        IID_PPV_ARGS(&mCbvHeap)));
+    ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&mCbvHeap)));
 }
 
-void BoxApp::BuildConstantBuffers()
-{
+void BoxApp::BuildConstantBuffers() {
 	mObjectCB = std::make_unique<UploadBuffer<ObjectConstants>>(md3dDevice.Get(), 1, true);
 
 	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
@@ -298,39 +295,27 @@ void BoxApp::BuildConstantBuffers()
 	cbvDesc.BufferLocation = cbAddress;
 	cbvDesc.SizeInBytes = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
 
-	md3dDevice->CreateConstantBufferView(
-		&cbvDesc,
-		mCbvHeap->GetCPUDescriptorHandleForHeapStart());
+	md3dDevice->CreateConstantBufferView(&cbvDesc, mCbvHeap->GetCPUDescriptorHandleForHeapStart());
 }
 
-void BoxApp::BuildRootSignature()
-{
-	// Shader programs typically require resources as input (constant buffers,
-	// textures, samplers).  The root signature defines the resources the shader
-	// programs expect.  If we think of the shader programs as a function, and
-	// the input resources as function parameters, then the root signature can be
-	// thought of as defining the function signature.  
+void BoxApp::BuildRootSignature() {
+	CD3DX12_ROOT_PARAMETER slotRootParameter[3];
 
-	// Root parameter can be a table, root descriptor or root constants.
-	CD3DX12_ROOT_PARAMETER slotRootParameter[1];
+	slotRootParameter[0].InitAsConstantBufferView(0);
+	slotRootParameter[1].InitAsConstantBufferView(1);
+	slotRootParameter[2].InitAsConstantBufferView(2);
 
-	// Create a single descriptor table of CBVs.
 	CD3DX12_DESCRIPTOR_RANGE cbvTable;
 	cbvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
 	slotRootParameter[0].InitAsDescriptorTable(1, &cbvTable);
 
-	// A root signature is an array of root parameters.
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(1, slotRootParameter, 0, nullptr, 
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(1, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-	// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
 	ComPtr<ID3DBlob> serializedRootSig = nullptr;
 	ComPtr<ID3DBlob> errorBlob = nullptr;
-	HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
-		serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+	HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
 
-	if(errorBlob != nullptr)
-	{
+	if(errorBlob != nullptr) {
 		::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
 	}
 	ThrowIfFailed(hr);
@@ -356,10 +341,8 @@ void BoxApp::BuildShadersAndInputLayout()
     };
 }
 
-void BoxApp::BuildBoxGeometry()
-{
-    std::array<Vertex, 8> vertices =
-    {
+void BoxApp::BuildBoxGeometry() {
+    std::array<Vertex, 8> vertices = {
         Vertex({ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(Colors::White) }),
 		Vertex({ XMFLOAT3(-1.0f, +1.0f, -1.0f), XMFLOAT3(Colors::Black) }),
 		Vertex({ XMFLOAT3(+1.0f, +1.0f, -1.0f), XMFLOAT3(Colors::Red) }),
@@ -370,8 +353,7 @@ void BoxApp::BuildBoxGeometry()
 		Vertex({ XMFLOAT3(+1.0f, -1.0f, +1.0f), XMFLOAT3(Colors::Magenta) })
     };
 
-	std::array<std::uint16_t, 36> indices =
-	{
+	std::array<std::uint16_t, 36> indices = {
 		// front face
 		0, 1, 2,
 		0, 2, 3,
@@ -428,19 +410,16 @@ void BoxApp::BuildBoxGeometry()
 	mBoxGeo->DrawArgs["box"] = submesh;
 }
 
-void BoxApp::BuildPSO()
-{
+void BoxApp::BuildPSO() {
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
     ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
     psoDesc.InputLayout = { mInputLayout.data(), (UINT)mInputLayout.size() };
     psoDesc.pRootSignature = mRootSignature.Get();
-    psoDesc.VS = 
-	{ 
+    psoDesc.VS = {
 		reinterpret_cast<BYTE*>(mvsByteCode->GetBufferPointer()), 
 		mvsByteCode->GetBufferSize() 
 	};
-    psoDesc.PS = 
-	{ 
+    psoDesc.PS = {
 		reinterpret_cast<BYTE*>(mpsByteCode->GetBufferPointer()), 
 		mpsByteCode->GetBufferSize() 
 	};
