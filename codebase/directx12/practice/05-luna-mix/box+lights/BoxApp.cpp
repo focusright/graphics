@@ -482,25 +482,14 @@ void BoxApp::UpdateObjectCBs(const GameTimer& gt) {
 
 void BoxApp::UpdateMaterialCBs(const GameTimer& gt) {
 	auto currMaterialCB = MaterialCB.get();
-	for (auto& e : mMaterials) {
-		// Only update the cbuffer data if the constants have changed.  If the cbuffer
-		// data changes, it needs to be updated for each FrameResource.
-		Material* mat = e.second.get();
-		if (mat->NumFramesDirty > 0) {
-			XMMATRIX matTransform = XMLoadFloat4x4(&mat->MatTransform);
-
-			MaterialConstants matConstants;
-			matConstants.DiffuseAlbedo = mat->DiffuseAlbedo;
-			matConstants.FresnelR0 = mat->FresnelR0;
-			matConstants.Roughness = mat->Roughness;
-			XMStoreFloat4x4(&matConstants.MatTransform, XMMatrixTranspose(matTransform));
-
-			currMaterialCB->CopyData(mat->MatCBIndex, matConstants);
-
-			// Next FrameResource need to be updated too.
-			mat->NumFramesDirty--;
-		}
-	}
+    Material* mat = mMaterials["bricks0"].get();
+	XMMATRIX matTransform = XMLoadFloat4x4(&mat->MatTransform);
+	MaterialConstants matConstants;
+	matConstants.DiffuseAlbedo = mat->DiffuseAlbedo;
+	matConstants.FresnelR0 = mat->FresnelR0;
+	matConstants.Roughness = mat->Roughness;
+	XMStoreFloat4x4(&matConstants.MatTransform, XMMatrixTranspose(matTransform));
+	currMaterialCB->CopyData(mat->MatCBIndex, matConstants);
 }
 
 void BoxApp::UpdateMainPassCB(const GameTimer& gt) {
