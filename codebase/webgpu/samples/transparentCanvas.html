@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>webgpu-samples: transparentCanvas</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      html, body {
+        margin: 0;      /* remove default margin */
+        height: 100%;   /* make body fill the browser window */
+        place-content: center center;
+      }
+      /* Display the canvas as a centered element floating over the page content */
+      canvas {
+        width: 600px;
+        height: 600px;
+        max-width: 100%;
+        display: block;
+        top: 0px;
+        left: 0;
+        right: 0;
+        margin-inline: auto;
+        position: absolute;
+        z-index: 1;
+      }
+    </style>
+    <script type="module">
+      import { mat4, vec3 } from './assets/wgpu-matrix.module.js';
+      import { cubeVertexArray, cubeVertexSize, cubeUVOffset, cubePositionOffset, cubeVertexCount } from './assets/meshes/cube.js';
+      import { quitIfWebGPUNotAvailable } from './util.js';
+
+      var basicVertWGSL = `struct Uniforms {
+        modelViewProjectionMatrix : mat4x4f,
+      }
+      @binding(0) @group(0) var<uniform> uniforms : Uniforms;
+
+      struct VertexOutput {
+        @builtin(position) Position : vec4f,
+        @location(0) fragUV : vec2f,
+        @location(1) fragPosition: vec4f,
+      }
+
+      @vertex
+      fn main(
+        @location(0) position : vec4f,
+        @location(1) uv : vec2f
+      ) -> VertexOutput {
+        var output : VertexOutput;
+        output.Position = uniforms.modelViewProjectionMatrix * position;
+        output.fragUV = uv;
+        output.fragPosition = 0.5 * (position + vec4(1.0, 1.0, 1.0, 1.0));
+        return output;
+      }`;
+
+      var vertexPositionColorWGSL = `@fragment
+      fn main(
+        @location(0) fragUV: vec2f,
+        @location(1) fragPosition: vec4f
+      ) -> @location(0) vec4f {
+        return fragPosition;
+      }`;
+
+      const canvas = document.querySelector('canvas');
+      const adapter = await navigator.gpu?.requestAdapter();
+      const device = await adapter?.requestDevice();
+      quitIfWebGPUNotAvailable(adapter, device);
+      const context = canvas.getContext('webgpu');
+      const devicePixelRatio = window.devicePixelRatio;
+      canvas.width = canvas.clientWidth * devicePixelRatio;
+      canvas.height = canvas.clientHeight * devicePixelRatio;
+      const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+      context.configure({
+          device,
+          format: presentationFormat,
+          // The canvas alphaMode defaults to 'opaque', use 'premultiplied' for transparency.
+          alphaMode: 'premultiplied',
+      });
+      // Create a vertex buffer from the cube data.
+      const verticesBuffer = device.createBuffer({
+          size: cubeVertexArray.byteLength,
+          usage: GPUBufferUsage.VERTEX,
+          mappedAtCreation: true,
+      });
+      new Float32Array(verticesBuffer.getMappedRange()).set(cubeVertexArray);
+      verticesBuffer.unmap();
+      const pipeline = device.createRenderPipeline({
+          layout: 'auto',
+          vertex: {
+              module: device.createShaderModule({
+                  code: basicVertWGSL,
+              }),
+              buffers: [
+                  {
+                      arrayStride: cubeVertexSize,
+                      attributes: [
+                          {
+                              // position
+                              shaderLocation: 0,
+                              offset: cubePositionOffset,
+                              format: 'float32x4',
+                          },
+                          {
+                              // uv
+                              shaderLocation: 1,
+                              offset: cubeUVOffset,
+                              format: 'float32x2',
+                          },
+                      ],
+                  },
+              ],
+          },
+          fragment: {
+              module: device.createShaderModule({
+                  code: vertexPositionColorWGSL,
+              }),
+              targets: [
+                  {
+                      format: presentationFormat,
+                  },
+              ],
+          },
+          primitive: {
+              topology: 'triangle-list',
+              cullMode: 'back',
+          },
+          depthStencil: {
+              depthWriteEnabled: true,
+              depthCompare: 'less',
+              format: 'depth24plus',
+          },
+      });
+      const depthTexture = device.createTexture({
+          size: [canvas.width, canvas.height],
+          format: 'depth24plus',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      });
+      const uniformBufferSize = 4 * 16; // 4x4 matrix
+      const uniformBuffer = device.createBuffer({
+          size: uniformBufferSize,
+          usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      const uniformBindGroup = device.createBindGroup({
+          layout: pipeline.getBindGroupLayout(0),
+          entries: [
+              {
+                  binding: 0,
+                  resource: {
+                      buffer: uniformBuffer,
+                  },
+              },
+          ],
+      });
+      const renderPassDescriptor = {
+          colorAttachments: [
+              {
+                  view: undefined, // Assigned later
+                  clearValue: [0.5, 0.5, 0.5, 0.0], // Clear alpha to 0
+                  loadOp: 'clear',
+                  storeOp: 'store',
+              },
+          ],
+          depthStencilAttachment: {
+              view: depthTexture.createView(),
+              depthClearValue: 1.0,
+              depthLoadOp: 'clear',
+              depthStoreOp: 'store',
+          },
+      };
+      const aspect = canvas.width / canvas.height;
+      const projectionMatrix = mat4.perspective((2 * Math.PI) / 5, aspect, 1, 100.0);
+      const modelViewProjectionMatrix = mat4.create();
+      function getTransformationMatrix() {
+          const viewMatrix = mat4.identity();
+          mat4.translate(viewMatrix, vec3.fromValues(0, 0, -4), viewMatrix);
+          const now = Date.now() / 1000;
+          mat4.rotate(viewMatrix, vec3.fromValues(Math.sin(now), Math.cos(now), 0), 1, viewMatrix);
+          mat4.multiply(projectionMatrix, viewMatrix, modelViewProjectionMatrix);
+          return modelViewProjectionMatrix;
+      }
+      function frame() {
+          const transformationMatrix = getTransformationMatrix();
+          device.queue.writeBuffer(uniformBuffer, 0, transformationMatrix.buffer, transformationMatrix.byteOffset, transformationMatrix.byteLength);
+          renderPassDescriptor.colorAttachments[0].view = context
+              .getCurrentTexture()
+              .createView();
+          const commandEncoder = device.createCommandEncoder();
+          const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+          passEncoder.setPipeline(pipeline);
+          passEncoder.setBindGroup(0, uniformBindGroup);
+          passEncoder.setVertexBuffer(0, verticesBuffer);
+          passEncoder.draw(cubeVertexCount);
+          passEncoder.end();
+          device.queue.submit([commandEncoder.finish()]);
+          requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    </script>
+  </head>
+  <body>
+    <canvas></canvas>
+    <h1>WebGPU</h1>
+    <p>WebGPU exposes an API for performing operations, such as rendering
+    and computation, on a Graphics Processing Unit.
+
+    <p>Graphics Processing Units, or GPUs for short, have been essential
+    in enabling rich rendering and computational applications in personal
+    computing. WebGPU is an API that exposes the capabilities of GPU
+    hardware for the Web. The API is designed from the ground up to
+    efficiently map to (post-2014) native GPU APIs. WebGPU is not related
+    to WebGL and does not explicitly target OpenGL ES.
+
+    <p>WebGPU sees physical GPU hardware as GPUAdapters. It provides a
+    connection to an adapter via GPUDevice, which manages resources, and
+    the device's GPUQueues, which execute commands. GPUDevice may have
+    its own memory with high-speed access to the processing units.
+    GPUBuffer and GPUTexture are the physical resources backed by GPU
+    memory. GPUCommandBuffer and GPURenderBundle are containers for
+    user-recorded commands. GPUShaderModule contains shader code. The
+    other resources, such as GPUSampler or GPUBindGroup, configure the
+    way physical resources are used by the GPU.
+
+    <p>GPUs execute commands encoded in GPUCommandBuffers by feeding data
+    through a pipeline, which is a mix of fixed-function and programmable
+    stages. Programmable stages execute shaders, which are special
+    programs designed to run on GPU hardware. Most of the state of a
+    pipeline is defined by a GPURenderPipeline or a GPUComputePipeline
+    object. The state not included in these pipeline objects is set
+    during encoding with commands, such as beginRenderPass() or
+    setBlendConstant().`
+  </body>
+</html>
