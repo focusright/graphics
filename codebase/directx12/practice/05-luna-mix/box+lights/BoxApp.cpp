@@ -181,14 +181,9 @@ void BoxApp::Draw(const GameTimer& gt)
 
 	//Start using the constant buffer
 	auto objectCB = ObjectCB->Resource();
-	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress();
-	mCommandList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-
-	UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
+	mCommandList->SetGraphicsRootConstantBufferView(0, objectCB->GetGPUVirtualAddress());
 	auto matCB = MaterialCB->Resource();
-	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress();
-	mCommandList->SetGraphicsRootConstantBufferView(1, matCBAddress);
-	
+	mCommandList->SetGraphicsRootConstantBufferView(1, matCB->GetGPUVirtualAddress());
 	auto passCB = PassCB->Resource();
 	mCommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 	//End using the constant buffer
