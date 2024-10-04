@@ -186,7 +186,6 @@ void BoxApp::Draw(const GameTimer& gt)
 	mCommandList->SetGraphicsRootSignature(mRootSignature.Get());
 
     //Start using the constant buffer
-    UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
     auto objectCB = mObjectCB->Resource();
     D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress();
     mCommandList->SetGraphicsRootConstantBufferView(0, objCBAddress);
