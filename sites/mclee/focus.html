@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+        <style> /* https://stackoverflow.com/a/8486324/452436  */
+            * { margin:0; padding:0; }
+            html, body { width:100%; height:100%; }
+            canvas { display:block; }
+        </style>
+    </head>
+    <body>
+        <canvas id="mycanvas"></canvas>
+        <script type="text/javascript">
+            canvas = document.getElementById('mycanvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ctx = canvas.getContext('2d');
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle  = "white";
+            ctx.lineWidth = 3; //https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Applying_styles_and_colors
+            ctx.beginPath(); //https://www.w3schools.com/tags/canvas_arc.asp
+            ctx.arc(canvas.width/2, canvas.height/2, 5, 0, 2 * Math.PI);
+            ctx.stroke();
+        </script>    
+    </body>
+<html>
