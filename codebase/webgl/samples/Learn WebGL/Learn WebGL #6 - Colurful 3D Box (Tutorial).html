@@ -1,20 +1,27 @@
 <!DOCTYPE html>
-<html><!-- https://youtu.be/D3Z2mqxCN2g -->
-<head><!-- https://github.com/invent-box/Learn-WebGL/tree/master/05-Matrix/public -->
+<html><!-- https://youtu.be/BxvWibDxeRg -->
+<head><!-- https://github.com/invent-box/Learn-WebGL/tree/master/06-Box/public -->
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>WebGL Tutorial #5</title>
+    <title>WebGL Tutorial #6</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.6.1/gl-matrix-min.js"></script>
     <style>
+        body {
+            margin: 0;
+        }
+
         canvas {
-            border: 1px solid black;
+            /* border: 1px solid black; */
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
 <body>
-    <h1>WebGL!!</h1>
-    <canvas width="240" height="240"></canvas>
+    <!-- <h1>WebGL!!</h1> -->
+    <!-- <canvas width="1600px" height="900px"></canvas> -->
+    <canvas></canvas>
     <script>
         const canvas = document.querySelector('canvas');
         const gl = canvas.getContext('webgl');
@@ -24,16 +31,79 @@
         }
 
         const vertexData = [
-            0, 1, 0,    // V1.position
-            1, -1, 0,   // V2.position
-            -1, -1, 0,  // V3.position
+
+            // Front
+            0.5, 0.5, 0.5,
+            0.5, -.5, 0.5,
+            -.5, 0.5, 0.5,
+            -.5, 0.5, 0.5,
+            0.5, -.5, 0.5,
+            -.5, -.5, 0.5,
+
+            // Left
+            -.5, 0.5, 0.5,
+            -.5, -.5, 0.5,
+            -.5, 0.5, -.5,
+            -.5, 0.5, -.5,
+            -.5, -.5, 0.5,
+            -.5, -.5, -.5,
+
+            // Back
+            -.5, 0.5, -.5,
+            -.5, -.5, -.5,
+            0.5, 0.5, -.5,
+            0.5, 0.5, -.5,
+            -.5, -.5, -.5,
+            0.5, -.5, -.5,
+
+            // Right
+            0.5, 0.5, -.5,
+            0.5, -.5, -.5,
+            0.5, 0.5, 0.5,
+            0.5, 0.5, 0.5,
+            0.5, -.5, 0.5,
+            0.5, -.5, -.5,
+
+            // Top
+            0.5, 0.5, 0.5,
+            0.5, 0.5, -.5,
+            -.5, 0.5, 0.5,
+            -.5, 0.5, 0.5,
+            0.5, 0.5, -.5,
+            -.5, 0.5, -.5,
+
+            // Bottom
+            0.5, -.5, 0.5,
+            0.5, -.5, -.5,
+            -.5, -.5, 0.5,
+            -.5, -.5, 0.5,
+            0.5, -.5, -.5,
+            -.5, -.5, -.5,
         ];
 
-        const colorData = [
-            1, 0, 0,    // V1.color
-            0, 1, 0,    // V2.color
-            0, 0, 1,    // V3.color
-        ];
+        // const colorData = [
+        //     1, 0, 0,    // V1.color
+        //     0, 1, 0,    // V2.color
+        //     0, 0, 1,    // V3.color
+        // ];
+
+        function randomColor() {
+            return [Math.random(), Math.random(), Math.random()];
+        }
+
+        // let colorData = [
+        //     ...randomColor(),
+        //     ...randomColor(),
+        //     ...randomColor(),
+        // ];
+
+        let colorData = [];
+        for (let face = 0; face < 6; face++) {
+            let faceColor = randomColor();
+            for (let vertex = 0; vertex < 6; vertex++) {
+                colorData.push(...faceColor);
+            }
+        }
 
         const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -90,6 +160,7 @@
         gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
 
         gl.useProgram(program);
+        gl.enable(gl.DEPTH_TEST);
 
         const uniformLocations = {
             matrix: gl.getUniformLocation(program, `matrix`),
@@ -104,8 +175,9 @@
         function animate() {
             requestAnimationFrame(animate);
             mat4.rotateZ(matrix, matrix, Math.PI/2 / 70);
+            mat4.rotateX(matrix, matrix, Math.PI/2 / 70);
             gl.uniformMatrix4fv(uniformLocations.matrix, false, matrix);
-            gl.drawArrays(gl.TRIANGLES, 0, 3);
+            gl.drawArrays(gl.TRIANGLES, 0, vertexData.length / 3);
         }
 
         animate();
