@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Page Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    <h1>WebGL!!</h1>
+    <canvas></canvas>
+    <script>
+        const canvas = document.querySelector('canvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            throw new Error('WebGL not supported');
+        }
+
+        alert(`Everything's peachy hear with WebGL`)
+    </script>
+</body>
+</html>
