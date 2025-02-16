@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>WebGL Tutorial</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.6.1/gl-matrix-min.js"></script>
+    <style>
+        body {
+            display: grid;
+            justify-content: center;
+            align-content: center;
+            height: 100vh;
+
+            background: #303030;
+            color: white;
+            margin: 0;
+        }
+
+        h1 {
+            grid-row: 1/2;
+            grid-column: 1/2;
+            align-self: center;
+            z-index: 100;
+
+            text-align: center;
+            font-family: arial;
+            
+            font-size: 5em;
+        }
+
+        canvas {
+            grid-row: 1/2;
+            grid-column: 1/2;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebGL!</h1>
+    <canvas></canvas>
+
+    <script>
+        let canvas
+        let gl
+
+        async function loadShaderProgram(vertexSource, fragmentSource) {
+            
+            function loadShader(type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    if (type === gl.VERTEX_SHADER) {
+                        throw new Error(`(WebGL vertex shader) ${gl.getShaderInfoLog(shader)}`);
+                    } else if (type === gl.FRAGMENT_SHADER) {
+                        throw new Error(`(WebGL fragment shader) ${gl.getShaderInfoLog(shader)}`);
+                    }
+                }
+                return shader;
+            }
+            
+            const vertexShader = loadShader(gl.VERTEX_SHADER, vertexSource);
+            const fragmentShader = loadShader(gl.FRAGMENT_SHADER, fragmentSource);
+            
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                throw new Error(`(WebGL shader program) ${gl.getProgramInfoLog(vertexShader)}`)
+            }
+
+            return program;
+        }
+
+        const FourCorners = new Float32Array([
+            // Z=0
+            // 1 --> 2
+            // | \   |
+            // |   \ |
+            // 0 <-- 3
+            
+            -1,  -1,  0,
+            -1,   1,  0,
+            1,  -1,  0,
+            1,   1,  0,
+        ]);
+
+        const myVertices = FourCorners;
+
+        class App {
+            constructor() {
+                this.modelMatrix = mat4.create();
+                this.viewMatrix = mat4.create();
+                this.projectionMatrix = mat4.create();
+
+                this.camera = {};
+                this.camera.translation = vec3.create();
+                this.camera.rotation = quat.create();
+            }
+            
+            async main() {
+                canvas = document.querySelector(`canvas`);
+                canvas.width = 720;//window.innerWidth;
+                canvas.height = canvas.width*9/16;//window.innerHeight;
+                gl = canvas.getContext(`webgl`);
+            
+                if (!gl) {
+                    throw new Error(`This browser does not support WebGL`);
+                }
+                
+                
+                const vertexShader = `
+                    precision mediump float;
+                    attribute vec3 vertex_position;
+
+                    // transformations in world-space, like translating an object
+                    // Without the model matrix, all objects would remain at the origin (0,0,0)
+                    uniform mat4 model_matrix;
+
+                    // transformations in camera-space, like rotating the camera
+                    // The view matrix determines what region of the world will be on-screen.
+                    uniform mat4 view_matrix;
+
+                    // transformation in screen-space, like applying perspective.
+                    // Without the projection matrix, the world would be viewed orthographically
+                    uniform mat4 projection_matrix;
+
+                    varying vec3 fragment_position;
+
+                    void main() {
+                        fragment_position = vertex_position;
+                        mat4 mvp = projection_matrix * view_matrix * model_matrix;
+                        gl_Position = mvp * vec4(vertex_position, 1);
+                    }
+                `;
+
+                const fragmentShader = `
+                    precision mediump float;
+                    varying vec3 fragment_position;
+
+                    void main() {
+                        gl_FragColor = vec4(
+                            (fragment_position.x+1.0)*0.5,
+                            (fragment_position.y+1.0)*0.5, 
+                            1, 
+                            1);
+                    }
+                `;
+
+                const program = await loadShaderProgram(vertexShader, fragmentShader);
+                gl.useProgram(program);
+            
+                const attributes = {
+                    position: gl.getAttribLocation(program, `vertex_position`)
+                };
+            
+                this.uniforms = {
+                    model_matrix: gl.getUniformLocation(program, `model_matrix`),
+                    view_matrix: gl.getUniformLocation(program, `view_matrix`),
+                    projection_matrix: gl.getUniformLocation(program, `projection_matrix`),
+                }
+            
+                const buffers = {
+                    vertex: gl.createBuffer(),
+                    index: gl.createBuffer(),
+                }
+
+                // bind buffers and load data to GPU
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertex);
+                gl.bufferData(gl.ARRAY_BUFFER, myVertices, gl.STATIC_DRAW);
+            
+                // descripe data layout of the `position` attribute
+                gl.vertexAttribPointer(
+                    attributes.position, 
+                    3, /* size */
+                    gl.FLOAT, /* type */
+                    false, /* normalized? */
+                    12, /* stride */
+                    0, /* offset */
+                );
+
+
+                gl.enableVertexAttribArray(attributes.position);
+
+                gl.enable(gl.DEPTH_TEST);
+                
+                this.render();    
+            }
+
+            update() {
+                // set uniforms
+                gl.uniformMatrix4fv(this.uniforms.model_matrix, false, this.modelMatrix);
+                gl.uniformMatrix4fv(this.uniforms.view_matrix, false, this.viewMatrix);
+                gl.uniformMatrix4fv(this.uniforms.projection_matrix, false, this.projectionMatrix);
+            }
+
+            render() {
+                this.update();
+
+                // gl.clearColor(1, 1, 1, 1);
+                // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, myVertices.length/3);
+                requestAnimationFrame(this.render.bind(this));
+            }
+        }
+
+        const app = new App();
+        app.main();
+    </script>
+</body>
+</html>
