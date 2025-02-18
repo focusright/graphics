@@ -12,24 +12,19 @@
             justify-content: center;
             align-content: center;
             height: 100vh;
-
             background: #303030;
             color: white;
             margin: 0;
         }
-
         h1 {
             grid-row: 1/2;
             grid-column: 1/2;
             align-self: center;
             z-index: 100;
-
             text-align: center;
             font-family: arial;
-            
             font-size: 5em;
         }
-
         canvas {
             grid-row: 1/2;
             grid-column: 1/2;
@@ -96,7 +91,6 @@
                 this.modelMatrix = mat4.create();
                 this.viewMatrix = mat4.create();
                 this.projectionMatrix = mat4.create();
-
                 this.camera = {};
                 this.camera.translation = vec3.create();
                 this.camera.rotation = quat.create();
@@ -108,9 +102,7 @@
                 canvas.height = canvas.width*9/16;//window.innerHeight;
                 gl = canvas.getContext(`webgl`);
             
-                if (!gl) {
-                    throw new Error(`This browser does not support WebGL`);
-                }
+                if (!gl) { throw new Error(`This browser does not support WebGL`); }
                 
                 
                 const vertexShader = `
@@ -183,11 +175,8 @@
                     0, /* offset */
                 );
 
-
                 gl.enableVertexAttribArray(attributes.position);
-
                 gl.enable(gl.DEPTH_TEST);
-                
                 this.render();    
             }
 
