@@ -12,26 +12,21 @@
             justify-content: center;
             align-content: center;
             height: 100vh;
-
             background: #303030;
             /* background: black; */
             color: white;
             margin: 0;
         }
-
         h1 {
             display: none;
             grid-row: 1/2;
             grid-column: 1/2;
             align-self: center;
             z-index: 100;
-
             text-align: center;
             font-family: arial;
-            
             font-size: 5em;
         }
-
         canvas {
             grid-row: 1/2;
             grid-column: 1/2;
@@ -56,7 +51,6 @@
                 });
 
                 props.STRIDE = byteCount;
-
                 return props;
             },
 
@@ -74,7 +68,6 @@
                 vertices.forEach(vertex => {
                     order.forEach(prop => {
                         const value = vertex[prop];
-
                         if (Array.isArray(value) || value instanceof Float32Array) {
                             data1D.push(...value);
                             // value.forEach(item => data1D.push(item));
@@ -137,8 +130,6 @@
                 }
 
                 // program.u = Program.locateUniforms(gl, program);
-
-                
                 return program;
             },
 
@@ -166,7 +157,6 @@
                     uniforms[info.name] = gl.getUniformLocation(program, info.name);
                 }
 
-
                 return uniforms;
             },
         };
@@ -190,7 +180,6 @@
                 this.gl = gl;
                 this.vertexDef = vertexDef;
                 this.vertices = vertices;
-                
                 this.texture = null;
 
                 this.position = vec3.create();
@@ -289,7 +278,6 @@
                     const mvpMatrix = mat4.multiply(mat4.create(), camera.projectionMatrix, modelViewMatrix);
                     // const mvpMatrix = mat4.multiply(mat4.create(), camera.matrix, mesh.matrix);
                     gl.uniformMatrix4fv(this.program.u.mvpMatrix, false, mvpMatrix);
-                    
                     mesh.drawArrays();
                 });
             }
@@ -368,12 +356,11 @@
             const image = new Image();
             image.onload = function() {
                 gl.bindTexture(gl.TEXTURE_2D, texture);
-                gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
-                            srcFormat, srcType, image);
-        
-            function isPowerOf2(value) {
-                return (value & (value - 1)) == 0;
-            }
+                gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, srcFormat, srcType, image);
+
+                function isPowerOf2(value) {
+                    return (value & (value - 1)) == 0;
+                }
 
                 // WebGL1 has different requirements for power of 2 images
                 // vs non power of 2 images so check if the image is a
@@ -391,7 +378,6 @@
             };
 
             image.src = url;
-        
             return texture;
         }
 
@@ -443,7 +429,6 @@
 
         const lasers = [...Array(9)].map(createLaser);
 
-
         async function main() {
             const vertexShader = `
                 precision highp float;
@@ -474,9 +459,7 @@
                 }
             `;
             const program = await Program.create(gl, vertexShader, fragmentShader);
-
             Vertex.connectProgram(gl, MyVertex, program);
-
             const renderer = new Renderer(gl, program);
 
             let time = Date.now() * 0.001;
