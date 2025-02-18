@@ -108,7 +108,6 @@
         gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvData), gl.STATIC_DRAW);
 
-
         // RESOURCE LOADING
         // ================
 
@@ -118,17 +117,13 @@
 
             image.onload = e => {
                 gl.bindTexture(gl.TEXTURE_2D, texture);
-                
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-
                 gl.generateMipmap(gl.TEXTURE_2D);
             };
 
             image.src = url;
             return texture;
         }
-
-
 
         const brick = loadTexture(`textures/default_brick.png`);
 
@@ -142,12 +137,9 @@
             const vertexShader = gl.createShader(gl.VERTEX_SHADER);
             gl.shaderSource(vertexShader, `
             precision mediump float;
-
             attribute vec3 position;
             attribute vec2 uv;
-
             varying vec2 vUV;
-
             uniform mat4 matrix;
 
             void main() {
@@ -160,7 +152,6 @@
             const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
             gl.shaderSource(fragmentShader, `
             precision mediump float;
-
             varying vec2 vUV;
             uniform sampler2D textureID;
 
@@ -217,16 +208,13 @@
         mat4.translate(viewMatrix, viewMatrix, [0, 0.1, 2]);
         mat4.invert(viewMatrix, viewMatrix);
 
-
         // ANIMATION LOOP
         // ==============
 
         function animate() {
             requestAnimationFrame(animate);
-
             mat4.rotateX(modelMatrix, modelMatrix, Math.PI/60);
             mat4.rotateY(modelMatrix, modelMatrix, Math.PI/160);
-
             mat4.multiply(mvMatrix, viewMatrix, modelMatrix);
             mat4.multiply(mvpMatrix, projectionMatrix, mvMatrix);
             gl.uniformMatrix4fv(uniformLocations.matrix, false, mvpMatrix);
