@@ -1,17 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang='en'>
 <head>
-  <meta charset="UTF-8">
-  <title>WebGL 05</title>
+  <meta charset='UTF-8'>
+  <title>WebGL 06</title>
   <style>
+    body {
+      text-align: center;
+    }
     canvas {
       display: block;
       margin: 100px auto;
     }
+    span {
+      display: inline-block;
+      width: 60px;
+    }
   </style>
 </head>
 <body bgcolor="DarkSlateGray">
-  <canvas width="600" height="600"></canvas>
+  <canvas width='600' height='600'></canvas>
+  Camera X: <input type='range' id='cameraTransX' min='-600' max='600' value='0'/> <span id='cameraTransXValue'>0</span><br />
+  Camera Y: <input type='range' id='cameraTransY' min='-600' max='600' value='0' /> <span id='cameraTransYValue'>0</span><br />
+  Camera Z: <input type='range' id='cameraTransZ' min='-200' max='200' value='200' /> <span id='cameraTransZValue'>-200</span>
+
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.3.2/gl-matrix-min.js'></script>
   <script>
     const cubeLength = 140;
     const geometryPoints = [
@@ -83,6 +95,15 @@
       1.0, 1.0,
       0.0, 1.0
     ];
+
+    const cubeVertexIndices = [
+      0, 1, 2,      0, 2, 3,    // Front face
+      4, 5, 6,      4, 6, 7,    // Back face
+      8, 9, 10,     8, 10, 11,  // Top face
+      12, 13, 14,   12, 14, 15, // Bottom face
+      16, 17, 18,   16, 18, 19, // Right face
+      20, 21, 22,   20, 22, 23  // Left face
+    ];
     const canvasDom = document.querySelector('canvas');
     const gl = canvasDom.getContext('webgl');
 
@@ -107,20 +128,20 @@
       return shader;
     }
 
-    // vec2 = a vector which length is 2
     const vertexShaderSource = `
       // An attribute will receive data from a buffer
       attribute vec2 a_cord;
       attribute vec4 position;
       uniform vec4 resolution;
       varying vec2 v_cord;
-      uniform mat4 transformMat;
+      uniform mat4 modelTrans;
+      uniform mat4 viewTrans;
 
       void main() {
-        vec4 transformedPosition = transformMat * position;
+        vec4 transformedPosition = viewTrans * modelTrans * position;
         vec4 glSpacePosition = (transformedPosition / resolution) * 2.0 - 1.0;
 
-        float xyDivision = 1.0 - 0.1 * glSpacePosition.z;
+        float xyDivision = 1.0 - 0.2 * glSpacePosition.z;
         glSpacePosition = vec4(glSpacePosition.xy / xyDivision, glSpacePosition.z, 1);
         gl_Position = vec4(glSpacePosition.xyz * vec3(1, -1, 1), 1);
         v_cord = a_cord;
@@ -164,7 +185,8 @@
     gl.enableVertexAttribArray(positionAttributeLocation);
     const cordAttributeLocation = gl.getAttribLocation(program, 'a_cord');
     gl.enableVertexAttribArray(cordAttributeLocation);
-    const transformMatUniformLocation = gl.getUniformLocation(program, 'transformMat');
+    const modelTransUniformLocation = gl.getUniformLocation(program, 'modelTrans');
+    const viewTransUniformLocation = gl.getUniformLocation(program, 'viewTrans');
 
     const positionBuffer = gl.createBuffer();
     // In WebGL, we can manipulate many resources on global bind points.
@@ -178,7 +200,7 @@
     gl.vertexAttribPointer(cordAttributeLocation, 2, gl.FLOAT, false, 0, 0);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cordBuffer), gl.STATIC_DRAW);
     const resolutionUniformLocation = gl.getUniformLocation(program, 'resolution');
-    gl.uniform4f(resolutionUniformLocation, canvasWidth, canvasHeight, 1200, 1);
+    gl.uniform4f(resolutionUniformLocation, canvasWidth, canvasHeight, 600, 1);
 
     const texture = gl.createTexture();
     texture.image = new Image();
@@ -199,32 +221,39 @@
       draw();
     }
 
-    const cubeVertexIndices = [
-      0, 1, 2,      0, 2, 3,    // Front face
-      4, 5, 6,      4, 6, 7,    // Back face
-      8, 9, 10,     8, 10, 11,  // Top face
-      12, 13, 14,   12, 14, 15, // Bottom face
-      16, 17, 18,   16, 18, 19, // Right face
-      20, 21, 22,   20, 22, 23  // Left face
-    ];
+
     const cubeVertexIndexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeVertexIndices), gl.STATIC_DRAW);
+
     gl.bindBuffer(gl.ARRAY_BUFFER, cordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometryPoints), gl.STATIC_DRAW);
 
+
     let angle = 0;
     function draw() {
       gl.clear(gl.COLOR_BUFFER_BIT  | gl.DEPTH_BUFFER_BIT);
 
-      for (let i = 0; i < 2; i++) {
-        for (let j = 0; j < 2; j++) {
-            let matrix = Matrix.yRotate(Matrix.zRotation(angle), angle);
+      const cameraTransX = document.querySelector('#cameraTransX').value;
+      document.querySelector('#cameraTransXValue').innerHTML = cameraTransX;
+      const cameraTransY = document.querySelector('#cameraTransY').value;
+      document.querySelector('#cameraTransYValue').innerHTML = cameraTransY;
+      const cameraTransZ = document.querySelector('#cameraTransZ').value;
+      document.querySelector('#cameraTransZValue').innerHTML = cameraTransZ;
+
+
+      const viewTransMatrix = Matrix.translation(cameraTransX, cameraTransY, cameraTransZ);
+      mat4.invert(viewTransMatrix, viewTransMatrix);
+      gl.uniformMatrix4fv(viewTransUniformLocation, false, viewTransMatrix);
+
+      for (let i = 0; i < 5; i++) {
+        for (let j = 0; j < 5; j++) {
+            let matrix = Matrix.yRotate(Matrix.zRotation(0), 0);
             matrix = Matrix.xRotate(matrix, angle * (i + j));
-            matrix = Matrix.translate(matrix, (cubeLength + 90) * (i + 1), (cubeLength + 90) * (j + 1), 340);
-            gl.uniformMatrix4fv(transformMatUniformLocation, false, matrix);
+            matrix = Matrix.translate(matrix, (cubeLength + 90) * (i + 1), (cubeLength + 90) * (j + 1), 400);
+            gl.uniformMatrix4fv(modelTransUniformLocation, false, matrix);
             gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
         }
       }
