@@ -132,7 +132,7 @@
         gl.drawArrays(gl.LINES, 0, axesPointList.length / 3);
 
 
-        let geometryPoints = [
+        let geometryPoints = [ //pyramid (large sized)
             325, 325, 325,
             475, 325, 325,
             325, 325, 325,
@@ -154,7 +154,7 @@
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometryPoints), gl.STATIC_DRAW);
         gl.drawArrays(gl.LINES, 0, geometryPoints.length / 3);
 
-        geometryPoints = [
+        geometryPoints = [ //lopsided diamond (medium sized)
             125, 200, 200,
             275, 200, 125,
             125, 200, 200,
@@ -179,7 +179,7 @@
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometryPoints), gl.STATIC_DRAW);
         gl.drawArrays(gl.LINES, 0, geometryPoints.length / 3);
 
-        geometryPoints = [
+        geometryPoints = [ //diamond (small sized)
             170, 200, 370,
             230, 200, 370,
             170, 200, 370,
