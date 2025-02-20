@@ -26,7 +26,7 @@
     const canvasHeight = canvasDom.clientHeight;
     // Set viewport when it comes to canvas resizing
     // gl.viewport(0, 0, canvasWidth, canvasHeight)
-    gl.clearColor(1, 1, 1, 1);
+    gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     /*
@@ -58,10 +58,10 @@
 
       void main() {
         vec2 glSpacePosition = (position / resolution) * 2.0 - 1.0;
-
         gl_Position = vec4(glSpacePosition * vec2(1, -1), 0, 1);
         v_color = gl_Position * 0.5 + 0.5 * cos(0.0);
-        v_test = a_color;
+        v_test = a_color; //straight red green blue
+        //v_test = v_color; //vertex color changes with position
       }
     `;
 
@@ -116,9 +116,9 @@
     gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
     gl.vertexAttribPointer(colorAttributeLocation, 3, gl.FLOAT, false, 0, 0);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-      0, 0, 0,
       1, 0, 0,
-      0, 1, 0
+      0, 1, 0,
+      0, 0, 1
     ]), gl.STATIC_DRAW);
     const resolutionUniformLocation = gl.getUniformLocation(program, 'resolution');
     gl.uniform2f(resolutionUniformLocation, canvasWidth, canvasHeight);
@@ -135,12 +135,13 @@
       let centerX = canvasWidth / 2;
       let centerY = canvasHeight / 2;
 
+      const scale = 2;
       pointList.push(centerX + canvasWidth * Math.sin(angle));
-      pointList.push(centerY - canvasHeight / 2 * Math.cos(angle));
-      pointList.push(centerX + canvasWidth / 2);
+      pointList.push(centerY - canvasHeight / scale * Math.cos(angle));
+      pointList.push(centerX + canvasWidth / scale);
       pointList.push(centerY);
-      pointList.push(centerX - canvasWidth / 2);
-      pointList.push(centerY);
+      pointList.push(centerX - canvasWidth / scale);
+      pointList.push(centerY); //only 6 points because vertexAttribPointer size is 2 on line 112
 
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pointList), gl.STATIC_DRAW);
