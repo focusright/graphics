@@ -1,21 +1,7 @@
-//--------------------------------------------------------------------------------------
-// File: d3dx12.h
-//
-// Direct3D 12 helper classes and functions
-//
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
-//
-// http://go.microsoft.com/fwlink/?LinkID=615561
-//--------------------------------------------------------------------------------------
-
 #pragma once
 
 #include <d3d12.h>
 #include <DirectXMath.h>
-#include <DirectXPackedVector.h>
-#include <DirectXCollision.h>
-#include <sal.h>
 
 #define D3DX12_DEFAULT 0
 #define CD3DX12_DEFAULT D3DX12_DEFAULT

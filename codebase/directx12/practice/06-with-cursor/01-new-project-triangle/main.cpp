@@ -1,11 +1,8 @@
 #include <windows.h>
-#include <d3d12.h>
 #include <dxgi1_6.h>
 #include <d3dcompiler.h>
-#include <DirectXMath.h>
 #include <wrl/client.h>
-#include <vector>
-#include <string>
+
 #include "d3dx12.h"  // For CD3DX12 helper classes
 
 #pragma comment(lib, "d3d12.lib")
