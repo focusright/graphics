@@ -1,10 +1,6 @@
 #pragma once
 
 #include <d3d12.h>
-#include <DirectXMath.h>
-#include <DirectXPackedVector.h>
-#include <DirectXCollision.h>
-#include <sal.h>
 
 #define D3DX12_DEFAULT 0
 #define CD3DX12_DEFAULT D3DX12_DEFAULT
