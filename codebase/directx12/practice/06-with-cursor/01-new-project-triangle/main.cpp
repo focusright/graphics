@@ -306,8 +306,20 @@ void PopulateCommandList() {
 
     g_commandList->SetGraphicsRootSignature(g_rootSignature.Get());
     
-    CD3DX12_VIEWPORT viewport(0.0f, 0.0f, static_cast<float>(WINDOW_WIDTH), static_cast<float>(WINDOW_HEIGHT));
-    CD3DX12_RECT scissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+    D3D12_VIEWPORT viewport{
+        0.0f,                                    // TopLeftX
+        0.0f,                                    // TopLeftY
+        static_cast<float>(WINDOW_WIDTH),        // Width
+        static_cast<float>(WINDOW_HEIGHT),       // Height
+        0.0f,                                    // MinDepth
+        1.0f                                     // MaxDepth
+    };
+    D3D12_RECT scissorRect{
+        0,              // left
+        0,              // top
+        WINDOW_WIDTH,   // right
+        WINDOW_HEIGHT   // bottom
+    };
     g_commandList->RSSetViewports(1, &viewport);
     g_commandList->RSSetScissorRects(1, &scissorRect);
 
@@ -322,10 +334,11 @@ void PopulateCommandList() {
     g_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
     g_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
-    vertexBufferView.BufferLocation = g_vertexBuffer->GetGPUVirtualAddress();
-    vertexBufferView.SizeInBytes = sizeof(Vertex) * 3;
-    vertexBufferView.StrideInBytes = sizeof(Vertex);
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView{
+        g_vertexBuffer->GetGPUVirtualAddress(),  // BufferLocation
+        sizeof(Vertex) * 3,                      // SizeInBytes
+        sizeof(Vertex)                           // StrideInBytes
+    };
     g_commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
     g_commandList->DrawInstanced(3, 1, 0, 0);
 

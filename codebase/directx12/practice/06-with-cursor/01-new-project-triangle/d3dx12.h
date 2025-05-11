@@ -120,36 +120,6 @@ namespace D3DX12
         }
     };
 
-    // CD3DX12_VIEWPORT
-    struct CD3DX12_VIEWPORT : public D3D12_VIEWPORT
-    {
-        CD3DX12_VIEWPORT() = default;
-        explicit CD3DX12_VIEWPORT(const D3D12_VIEWPORT& o) noexcept : D3D12_VIEWPORT(o) {}
-        CD3DX12_VIEWPORT(float topLeftX, float topLeftY, float width, float height, float minDepth = D3D12_MIN_DEPTH, float maxDepth = D3D12_MAX_DEPTH) noexcept
-        {
-            TopLeftX = topLeftX;
-            TopLeftY = topLeftY;
-            Width = width;
-            Height = height;
-            MinDepth = minDepth;
-            MaxDepth = maxDepth;
-        }
-    };
-
-    // CD3DX12_RECT
-    struct CD3DX12_RECT : public D3D12_RECT
-    {
-        CD3DX12_RECT() = default;
-        explicit CD3DX12_RECT(const D3D12_RECT& o) noexcept : D3D12_RECT(o) {}
-        CD3DX12_RECT(LONG left, LONG top, LONG right, LONG bottom) noexcept
-        {
-            this->left = left;
-            this->top = top;
-            this->right = right;
-            this->bottom = bottom;
-        }
-    };
-
     // CD3DX12_RESOURCE_BARRIER
     struct CD3DX12_RESOURCE_BARRIER : public D3D12_RESOURCE_BARRIER
     {
