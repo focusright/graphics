@@ -242,7 +242,7 @@ void CreatePipelineState() {
 
     const char* pixelShaderSource = R"(
         /*
-        Pulsing Guts - Annotated HLSL version
+        Pulsing Guts - Annotated HLSL version with descriptive variable names
         Ported and explained from https://www.shadertoy.com/view/clXXDl
         */
         cbuffer Constants : register(b0) {
@@ -262,48 +262,48 @@ void CreatePipelineState() {
             // 1. Coordinate system: center at (0,0), height = 1
             float2 fragCoord = input.position.xy;
             fragCoord.y = iResolution.y - fragCoord.y; // Flip Y for bottom-left origin
-            float2 uv = (fragCoord - 0.5 * iResolution) / iResolution.y;
+            float2 normalizedPos = (fragCoord - 0.5 * iResolution) / iResolution.y;
 
             // 2. Animation fades (each fades in a new effect)
-            float t = iTime;
-            float fade_squares         = clamp(0.4 * t, 0.0, 1.0);
-            float fade_layer_distance  = clamp(0.4 * (t - 2.5), 0.0, 1.0);
-            float fade_layer_rotation  = clamp(pow(0.2 * (t - 5.0), 1.5), 0.0, 1.0);
-            float fade_layer_zoomout   = clamp(0.2 * (t - 10.0), 0.0, 1.0);
-            float fade_pulse           = clamp(0.2 * (t - 15.0), 0.0, 1.0);
-            float t2 = t - 15.0;
-            float fade_radial_delay    = clamp(0.2 * (t - 20.0), 0.0, 1.0);
-            float fade_edge_darkening  = clamp(0.2 * (t - 25.0), 0.0, 1.0);
+            float time = iTime;
+            float fadeSquares         = clamp(0.4 * time, 0.0, 1.0);
+            float fadeLayerDistance   = clamp(0.4 * (time - 2.5), 0.0, 1.0);
+            float fadeLayerRotation   = clamp(pow(0.2 * (time - 5.0), 1.5), 0.0, 1.0);
+            float fadeLayerZoomout    = clamp(0.2 * (time - 10.0), 0.0, 1.0);
+            float fadePulse           = clamp(0.2 * (time - 15.0), 0.0, 1.0);
+            float pulseTime           = time - 15.0;
+            float fadeRadialDelay     = clamp(0.2 * (time - 20.0), 0.0, 1.0);
+            float fadeEdgeDarkening   = clamp(0.2 * (time - 25.0), 0.0, 1.0);
 
             // 3. Layered pattern setup
-            float2 p = uv;
-            float d = dot(p, p); // squared distance from center
-            float S = 12.0; // initial zoom factor
-            float2x2 m = rotation(fade_layer_rotation * 1.0); // rotation matrix, fades in
-            float2 q = float2(0.0, 0.0);
-            float2 n = float2(0.0, 0.0);
-            float a = 0.0;
-            float sum = 0.0;
-            float layers = 20.0; // Always 20 layers for full effect
+            float2 layerPos = normalizedPos;
+            float distanceFromCenter = dot(layerPos, layerPos); // squared distance from center
+            float scale = 12.0; // initial zoom factor
+            float2x2 rotationMatrix = rotation(fadeLayerRotation * 1.0); // rotation matrix, fades in
+            float2 warpedPos = float2(0.0, 0.0);
+            float2 noiseOffset = float2(0.0, 0.0);
+            float layerValue = 0.0;
+            float patternSum = 0.0;
+            float numLayers = 20.0; // Always 20 layers for full effect
 
             // 4. The layer loop
             [loop]
-            for (float j = 0.0; j < layers; j += 1.0) {
-                p = mul(p, m);
-                n = mul(n, m);
-                q = p * S
-                    + fade_squares * n
-                    + fade_layer_distance * j
-                    + fade_pulse * (4.0 * t2 + 0.8 * sin(4.0 * t2 - fade_radial_delay * 6.0 * d));
-                a = (cos(q.x) + cos(q.y)) * 0.2 / S;
-                sum += a;
-                n -= sin(q);
-                S *= (1.0 + 0.2 * fade_layer_zoomout);
+            for (float layerIndex = 0.0; layerIndex < numLayers; layerIndex += 1.0) {
+                layerPos = mul(layerPos, rotationMatrix);
+                noiseOffset = mul(noiseOffset, rotationMatrix);
+                warpedPos = layerPos * scale
+                    + fadeSquares * noiseOffset
+                    + fadeLayerDistance * layerIndex
+                    + fadePulse * (4.0 * pulseTime + 0.8 * sin(4.0 * pulseTime - fadeRadialDelay * 6.0 * distanceFromCenter));
+                layerValue = (cos(warpedPos.x) + cos(warpedPos.y)) * 0.2 / scale;
+                patternSum += layerValue;
+                noiseOffset -= sin(warpedPos);
+                scale *= (1.0 + 0.2 * fadeLayerZoomout);
             }
 
             // 5. Final color calculation
-            float3 col = float3(4, 2, 1) * (sum + 0.2) + sum + sum - fade_edge_darkening * d;
-            return float4(col, 1.0);
+            float3 color = float3(4, 2, 1) * (patternSum + 0.2) + patternSum + patternSum - fadeEdgeDarkening * distanceFromCenter;
+            return float4(color, 1.0);
         }
     )";
 
