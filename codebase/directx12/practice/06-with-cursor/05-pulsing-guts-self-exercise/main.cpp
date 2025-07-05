@@ -5,6 +5,7 @@
 #include <d3dcompiler.h>
 #include <wrl/client.h>
 #include <chrono>
+#include <cstdio>
 
 #include "d3dx12.h"  // For CD3DX12 helper classes
 
@@ -229,72 +230,47 @@ void CreatePipelineState() {
     compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
-    const char* vertexShaderSource = R"(
-        struct PSInput {
-            float4 position : SV_POSITION;
-        };
-        PSInput VSMain(float3 position : POSITION) {
-            PSInput result;
-            result.position = float4(position, 1.0f);
-            return result;
-        }
-    )";
-
-    const char* pixelShaderSource = R"(
-        cbuffer Constants : register(b0) {
-            float2 iResolution;
-            float  iTime;
-            float  pad;
-        };
-        struct PSInput {
-            float4 position : SV_POSITION;
-        };
-        float2x2 rotate2D(float angle) {
-            float c = cos(angle);
-            float s = sin(angle);
-            return float2x2(c, s, -s, c);
-        }
-        float4 PSMain(PSInput input) : SV_TARGET {
-            float2 fragCoord = input.position.xy;
-            // Flip Y to match ShaderToy's bottom-left origin
-            fragCoord.y = iResolution.y - fragCoord.y;
-            // Normalized, centered pixel coordinates (aspect-correct)
-            float2 normalizedPos = (fragCoord - 0.5 * iResolution) / iResolution.y;
-            float3 finalColor = float3(0, 0, 0);
-            float time = iTime;
-            float2 noiseOffset = float2(0, 0);
-            float2 warpedPos = float2(0, 0);
-            float2 iterPos = normalizedPos;
-            float distFromCenter = dot(iterPos, iterPos);
-            float scale = 12.0;
-            float accum = 0.0;
-            float2x2 rotationMatrix = rotate2D(5.0);
-            [loop]
-            for (float iter = 0.0; iter < 20.0; iter += 1.0) {
-                iterPos = mul(iterPos, rotationMatrix);
-                noiseOffset = mul(noiseOffset, rotationMatrix);
-                warpedPos = iterPos * scale + time * 4.0 + sin(time * 4.0 - distFromCenter * 6.0) * 0.8 + iter + noiseOffset;
-                accum += dot(cos(warpedPos) / scale, float2(0.2, 0.2));
-                noiseOffset -= sin(warpedPos);
-                scale *= 1.2;
-            }
-            finalColor = float3(4, 2, 1) * (accum + 0.2) + accum + accum - distFromCenter;
-            return float4(finalColor, 1.0);
-        }
-    )";
-
-    if (FAILED(D3DCompile(vertexShaderSource, strlen(vertexShaderSource), nullptr, nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, &error))) {
+    // Load shaders from external files
+    OutputDebugStringA("Attempting to compile vertex shader from file...\n");
+    
+    // Get the current directory and construct full paths
+    wchar_t currentDir[MAX_PATH];
+    GetCurrentDirectoryW(MAX_PATH, currentDir);
+    wchar_t vertexShaderPath[MAX_PATH];
+    wchar_t pixelShaderPath[MAX_PATH];
+    swprintf_s(vertexShaderPath, L"%s\\vertex_shader.hlsl", currentDir);
+    swprintf_s(pixelShaderPath, L"%s\\pixel_shader.hlsl", currentDir);
+    
+    OutputDebugStringA("Vertex shader path: ");
+    OutputDebugStringW(vertexShaderPath);
+    OutputDebugStringA("\n");
+    
+    if (FAILED(D3DCompileFromFile(vertexShaderPath, nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, &error))) {
         if (error) {
+            OutputDebugStringA("Vertex shader compilation failed:\n");
             OutputDebugStringA(static_cast<char*>(error->GetBufferPointer()));
+        } else {
+            OutputDebugStringA("Vertex shader compilation failed with no error details\n");
         }
         return;
     }
-    if (FAILED(D3DCompile(pixelShaderSource, strlen(pixelShaderSource), nullptr, nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, &error))) {
+    OutputDebugStringA("Vertex shader compiled successfully\n");
+    
+    OutputDebugStringA("Attempting to compile pixel shader from file...\n");
+    OutputDebugStringA("Pixel shader path: ");
+    OutputDebugStringW(pixelShaderPath);
+    OutputDebugStringA("\n");
+    
+    if (FAILED(D3DCompileFromFile(pixelShaderPath, nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, &error))) {
         if (error) {
+            OutputDebugStringA("Pixel shader compilation failed:\n");
             OutputDebugStringA(static_cast<char*>(error->GetBufferPointer()));
+        } else {
+            OutputDebugStringA("Pixel shader compilation failed with no error details\n");
         }
         return;
     }
+    OutputDebugStringA("Pixel shader compiled successfully\n");
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
