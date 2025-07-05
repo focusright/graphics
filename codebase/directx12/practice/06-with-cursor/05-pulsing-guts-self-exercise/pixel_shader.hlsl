@@ -27,24 +27,27 @@ float4 PSMain(PSInput input) : SV_TARGET {
     
     float3 finalColor = float3(0.0f, 0.0f, 0.0f);
     float2 noiseOffset = float2(0.0f, 0.0f);
-    float2 warpedPos = float2(0.0f, 0.0f);
-    float2 iterPos = normalizedPos;
-    float distFromCenter = dot(iterPos, iterPos);
+    float2 warpedPosition = float2(0.0f, 0.0f);
+    float2 spiralOut = float2(0.0f, 0.0f);
+    float2 iterationPosition = normalizedPos;
+    float distFromCenter = dot(iterationPosition, iterationPosition);
     float scale = 12.0f;
     float accum = 0.0f;
     float2x2 rotationMatrix = rotate2D(5.0f);
     
-    float cycle = 0.0f;
     const float SPEED = 4.0f;
+    const float PULSE_INTENSITY = 0.8f;
+    const float CRANK = time * SPEED;
+    const float CYCLE = sin(CRANK - distFromCenter * 6.0f) * PULSE_INTENSITY;
     
     [loop]
-    for (float iteration = 0.0f; iteration < 20.0f; iteration += 1.0f) {
-        iterPos = mul(iterPos, rotationMatrix);
+    for (float i = 0.0f; i < 20.0f; i += 1.0f) {
+        iterationPosition = mul(iterationPosition, rotationMatrix);
         noiseOffset = mul(noiseOffset, rotationMatrix);
-        cycle = sin(time * SPEED - distFromCenter * 6.0f);
-        warpedPos = iterPos * scale + time * SPEED + cycle * 0.8f + iteration + noiseOffset;
-        accum += dot(cos(warpedPos) / scale, float2(0.2f, 0.2f));
-        noiseOffset -= sin(warpedPos);
+        spiralOut = iterationPosition * scale;
+        warpedPosition = spiralOut + CRANK + CYCLE + i + noiseOffset;
+        accum += dot(cos(warpedPosition) / scale, float2(0.2f, 0.2f));
+        noiseOffset -= sin(warpedPosition);
         scale *= 1.2f;
     }
     
