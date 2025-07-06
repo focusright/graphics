@@ -104,7 +104,7 @@
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VSMain</EntryPointName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VSMain</EntryPointName>
     </FxCompile>
-    <FxCompile Include="pixel_shader.hlsl">
+    <FxCompile Include="pixel_shader_final.hlsl">
       <ShaderType>Pixel</ShaderType>
       <ShaderModel>5.0</ShaderModel>
       <ShaderEntry>PSMain</ShaderEntry>

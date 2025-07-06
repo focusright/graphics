@@ -123,13 +123,23 @@ void InitializeWindow(HINSTANCE hInstance) {
     RECT windowRect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
     AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
+    // Get screen dimensions
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+    // Calculate center position
+    int windowWidth = windowRect.right - windowRect.left;
+    int windowHeight = windowRect.bottom - windowRect.top;
+    int centerX = (screenWidth - windowWidth) / 2;
+    int centerY = (screenHeight - windowHeight) / 2;
+
     g_hwnd = CreateWindow(
         L"PulsingGutsSelfExercise",
         L"PulsingGutsSelfExercise",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        windowRect.right - windowRect.left,
-        windowRect.bottom - windowRect.top,
+        centerX, centerY,
+        windowWidth,
+        windowHeight,
         nullptr,
         nullptr,
         hInstance,
@@ -245,7 +255,7 @@ void CreatePipelineState() {
     wchar_t vertexShaderPath[MAX_PATH];
     wchar_t pixelShaderPath[MAX_PATH];
     swprintf_s(vertexShaderPath, L"%s\\vertex_shader.hlsl", currentDir);
-    swprintf_s(pixelShaderPath, L"%s\\pixel_shader.hlsl", currentDir);
+    swprintf_s(pixelShaderPath, L"%s\\pixel_shader_final.hlsl", currentDir);
     
     OutputDebugStringA("Vertex shader path: ");
     OutputDebugStringW(vertexShaderPath);
