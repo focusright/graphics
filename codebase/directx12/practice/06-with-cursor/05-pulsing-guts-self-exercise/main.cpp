@@ -142,6 +142,7 @@ void InitializeWindow(HINSTANCE hInstance) {
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = hInstance;
+    wc.hCursor = LoadCursor(nullptr, IDC_ARROW); // Set consistent arrow cursor
     wc.lpszClassName = L"PulsingGutsSelfExercise";
     RegisterClassEx(&wc);
 
