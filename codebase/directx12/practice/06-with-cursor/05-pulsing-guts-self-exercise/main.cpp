@@ -41,6 +41,12 @@ UINT64 g_fenceValue;
 HANDLE g_fenceEvent;
 ComPtr<IDXGISwapChain3> g_swapChain;
 
+// Shader switching variables
+ComPtr<ID3DBlob> g_vertexShader;
+ComPtr<ID3DBlob> g_pixelShaderFinal;
+ComPtr<ID3DBlob> g_pixelShader01;
+int g_currentShader = 1; // 0 = pixel_shader_final.hlsl, 1 = pixel_shader_01.hlsl (default)
+
 // Add global for constant buffer
 struct ShaderToyConstants {
     float iResolution[2];
@@ -65,6 +71,7 @@ void CreateVertexBuffer();
 void PopulateCommandList();
 void WaitForGpu();
 void MoveToNextFrame();
+void RecreatePipelineState();
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     InitializeWindow(hInstance);
@@ -104,6 +111,24 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
                 PostQuitMessage(0);
+                return 0;
+            }
+            else if (wParam == '0') {
+                // Switch to original shader (pixel_shader_final.hlsl)
+                if (g_currentShader != 0) {
+                    g_currentShader = 0;
+                    RecreatePipelineState();
+                    OutputDebugStringA("Switched to pixel_shader_final.hlsl\n");
+                }
+                return 0;
+            }
+            else if (wParam == '1') {
+                // Switch to new shader (pixel_shader_01.hlsl)
+                if (g_currentShader != 1) {
+                    g_currentShader = 1;
+                    RecreatePipelineState();
+                    OutputDebugStringA("Switched to pixel_shader_01.hlsl\n");
+                }
                 return 0;
             }
             break;
@@ -238,30 +263,25 @@ void CreatePipelineState() {
     }
     g_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&g_rootSignature));
 
-    // Create pipeline state
-    ComPtr<ID3DBlob> vertexShader;
-    ComPtr<ID3DBlob> pixelShader;
+    // Load all shaders
     UINT compileFlags = 0;
 #ifdef _DEBUG
     compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
-    // Load shaders from external files
-    OutputDebugStringA("Attempting to compile vertex shader from file...\n");
-    
     // Get the current directory and construct full paths
     wchar_t currentDir[MAX_PATH];
     GetCurrentDirectoryW(MAX_PATH, currentDir);
     wchar_t vertexShaderPath[MAX_PATH];
-    wchar_t pixelShaderPath[MAX_PATH];
+    wchar_t pixelShaderFinalPath[MAX_PATH];
+    wchar_t pixelShader01Path[MAX_PATH];
     swprintf_s(vertexShaderPath, L"%s\\vertex_shader.hlsl", currentDir);
-    swprintf_s(pixelShaderPath, L"%s\\pixel_shader_final.hlsl", currentDir);
+    swprintf_s(pixelShaderFinalPath, L"%s\\pixel_shader_final.hlsl", currentDir);
+    swprintf_s(pixelShader01Path, L"%s\\pixel_shader_01.hlsl", currentDir);
     
-    OutputDebugStringA("Vertex shader path: ");
-    OutputDebugStringW(vertexShaderPath);
-    OutputDebugStringA("\n");
-    
-    if (FAILED(D3DCompileFromFile(vertexShaderPath, nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, &error))) {
+    // Load vertex shader
+    OutputDebugStringA("Loading vertex shader...\n");
+    if (FAILED(D3DCompileFromFile(vertexShaderPath, nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &g_vertexShader, &error))) {
         if (error) {
             OutputDebugStringA("Vertex shader compilation failed:\n");
             OutputDebugStringA(static_cast<char*>(error->GetBufferPointer()));
@@ -270,31 +290,43 @@ void CreatePipelineState() {
         }
         return;
     }
-    OutputDebugStringA("Vertex shader compiled successfully\n");
+    OutputDebugStringA("Vertex shader loaded successfully\n");
     
-    OutputDebugStringA("Attempting to compile pixel shader from file...\n");
-    OutputDebugStringA("Pixel shader path: ");
-    OutputDebugStringW(pixelShaderPath);
-    OutputDebugStringA("\n");
-    
-    if (FAILED(D3DCompileFromFile(pixelShaderPath, nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, &error))) {
+    // Load pixel shader final
+    OutputDebugStringA("Loading pixel_shader_final.hlsl...\n");
+    if (FAILED(D3DCompileFromFile(pixelShaderFinalPath, nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &g_pixelShaderFinal, &error))) {
         if (error) {
-            OutputDebugStringA("Pixel shader compilation failed:\n");
+            OutputDebugStringA("Pixel shader final compilation failed:\n");
             OutputDebugStringA(static_cast<char*>(error->GetBufferPointer()));
         } else {
-            OutputDebugStringA("Pixel shader compilation failed with no error details\n");
+            OutputDebugStringA("Pixel shader final compilation failed with no error details\n");
         }
         return;
     }
-    OutputDebugStringA("Pixel shader compiled successfully\n");
+    OutputDebugStringA("Pixel shader final loaded successfully\n");
+    
+    // Load pixel shader 01
+    OutputDebugStringA("Loading pixel_shader_01.hlsl...\n");
+    if (FAILED(D3DCompileFromFile(pixelShader01Path, nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &g_pixelShader01, &error))) {
+        if (error) {
+            OutputDebugStringA("Pixel shader 01 compilation failed:\n");
+            OutputDebugStringA(static_cast<char*>(error->GetBufferPointer()));
+        } else {
+            OutputDebugStringA("Pixel shader 01 compilation failed with no error details\n");
+        }
+        return;
+    }
+    OutputDebugStringA("Pixel shader 01 loaded successfully\n");
+
+    // Create initial pipeline state with the default shader (pixel_shader_01.hlsl)
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
     psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
     psoDesc.pRootSignature = g_rootSignature.Get();
-    psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
-    psoDesc.PS = { pixelShader->GetBufferPointer(), pixelShader->GetBufferSize() };
+    psoDesc.VS = { g_vertexShader->GetBufferPointer(), g_vertexShader->GetBufferSize() };
+    psoDesc.PS = { g_pixelShader01->GetBufferPointer(), g_pixelShader01->GetBufferSize() };
     psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
     psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
@@ -421,4 +453,47 @@ void MoveToNextFrame() {
     }
 
     g_frameIndex = 1 - g_frameIndex;
+}
+
+void RecreatePipelineState() {
+    // Wait for GPU to finish before recreating pipeline state
+    WaitForGpu();
+    
+    // Release the current pipeline state
+    g_pipelineState.Reset();
+    
+    // Create new pipeline state with the selected shader
+    D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+    };
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+    psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
+    psoDesc.pRootSignature = g_rootSignature.Get();
+    psoDesc.VS = { g_vertexShader->GetBufferPointer(), g_vertexShader->GetBufferSize() };
+    
+    // Select the appropriate pixel shader based on current selection
+    if (g_currentShader == 0) {
+        psoDesc.PS = { g_pixelShaderFinal->GetBufferPointer(), g_pixelShaderFinal->GetBufferSize() };
+    } else {
+        psoDesc.PS = { g_pixelShader01->GetBufferPointer(), g_pixelShader01->GetBufferSize() };
+    }
+    
+    psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+    psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    psoDesc.DepthStencilState.DepthEnable = FALSE;
+    psoDesc.DepthStencilState.StencilEnable = FALSE;
+    psoDesc.SampleMask = UINT_MAX;
+    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    psoDesc.NumRenderTargets = 1;
+    psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    psoDesc.SampleDesc.Count = 1;
+    psoDesc.SampleDesc.Quality = 0;
+    
+    if (FAILED(g_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&g_pipelineState)))) {
+        OutputDebugStringA("Failed to recreate pipeline state\n");
+        return;
+    }
+    
+    OutputDebugStringA("Pipeline state recreated successfully\n");
 } 
