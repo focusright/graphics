@@ -19,7 +19,7 @@ float4 PSMain(PSInput input) : SV_TARGET {
     //distFromCenter = squared distance from the center (0,0) to the current pixel
     const float distFromCenter = dot(normalizedPos, normalizedPos);
     
-    //The color range is clamped to the valid range of [0.0, 1.0]
+    //The color range is clamped to [0.0, 1.0]
     //Without the dimming factor, one of the following will work:
     
     //const float3 ORANGE = float3(1.0f, 0.5f, 0.25f);

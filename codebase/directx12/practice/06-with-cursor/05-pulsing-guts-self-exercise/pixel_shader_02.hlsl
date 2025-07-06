@@ -1,31 +1,25 @@
 // Pixel Shader for PulsingGutsSelfExercise
 // Target: ps_5_0
 
-cbuffer Constants : register(b0)
-{
+cbuffer Constants : register(b0) {
     float2 iResolution;
     float iTime;
     float pad;
 };
 
-struct PSInput
-{
+struct PSInput {
     float4 position : SV_POSITION;
 };
 
-float2x2 rotate2D(float angle)
-{
+float2x2 rotate2D(float angle) {
     float c = cos(angle);
     float s = sin(angle);
     return float2x2(c, s, -s, c);
 }
 
-float4 PSMain(PSInput input) : SV_TARGET
-{
+float4 PSMain(PSInput input) : SV_TARGET {
     float2 fragCoord = input.position.xy;
-    // Flip Y to match ShaderToy's bottom-left origin
     fragCoord.y = iResolution.y - fragCoord.y;
-    // Normalized, centered pixel coordinates (aspect-correct)
     float2 normalizedPos = (fragCoord - 0.5f * iResolution) / iResolution.y;
     float time = iTime;
     
