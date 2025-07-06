@@ -51,7 +51,9 @@ ComPtr<ID3DBlob> g_pixelShader04;
 ComPtr<ID3DBlob> g_pixelShader05;
 ComPtr<ID3DBlob> g_pixelShader06;
 ComPtr<ID3DBlob> g_pixelShader07;
-int g_currentShader = 7; // 0 = pixel_shader_final.hlsl, 1 = pixel_shader_01.hlsl, 2 = pixel_shader_02.hlsl, 3 = pixel_shader_03.hlsl, 4 = pixel_shader_04.hlsl, 5 = pixel_shader_05.hlsl, 6 = pixel_shader_06.hlsl, 7 = pixel_shader_07.hlsl (default)
+ComPtr<ID3DBlob> g_pixelShader08;
+ComPtr<ID3DBlob> g_pixelShader09;
+int g_currentShader = 9; // 0 = pixel_shader_final.hlsl, 1 = pixel_shader_01.hlsl, 2 = pixel_shader_02.hlsl, 3 = pixel_shader_03.hlsl, 4 = pixel_shader_04.hlsl, 5 = pixel_shader_05.hlsl, 6 = pixel_shader_06.hlsl, 7 = pixel_shader_07.hlsl, 8 = pixel_shader_08.hlsl, 9 = pixel_shader_09.hlsl (default)
 
 // Add global for constant buffer
 struct ShaderToyConstants {
@@ -188,6 +190,24 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     g_currentShader = 7;
                     RecreatePipelineState();
                     OutputDebugStringA("Switched to pixel_shader_07.hlsl\n");
+                }
+                return 0;
+            }
+            else if (wParam == '8') {
+                // Switch to new shader (pixel_shader_08.hlsl)
+                if (g_currentShader != 8) {
+                    g_currentShader = 8;
+                    RecreatePipelineState();
+                    OutputDebugStringA("Switched to pixel_shader_08.hlsl\n");
+                }
+                return 0;
+            }
+            else if (wParam == '9') {
+                // Switch to new shader (pixel_shader_09.hlsl)
+                if (g_currentShader != 9) {
+                    g_currentShader = 9;
+                    RecreatePipelineState();
+                    OutputDebugStringA("Switched to pixel_shader_09.hlsl\n");
                 }
                 return 0;
             }
@@ -342,6 +362,8 @@ void CreatePipelineState() {
     wchar_t pixelShader05Path[MAX_PATH];
     wchar_t pixelShader06Path[MAX_PATH];
     wchar_t pixelShader07Path[MAX_PATH];
+    wchar_t pixelShader08Path[MAX_PATH];
+    wchar_t pixelShader09Path[MAX_PATH];
     swprintf_s(vertexShaderPath, L"%s\\vertex_shader.hlsl", currentDir);
     swprintf_s(pixelShaderFinalPath, L"%s\\pixel_shader_final.hlsl", currentDir);
     swprintf_s(pixelShader01Path, L"%s\\pixel_shader_01.hlsl", currentDir);
@@ -351,6 +373,8 @@ void CreatePipelineState() {
     swprintf_s(pixelShader05Path, L"%s\\pixel_shader_05.hlsl", currentDir);
     swprintf_s(pixelShader06Path, L"%s\\pixel_shader_06.hlsl", currentDir);
     swprintf_s(pixelShader07Path, L"%s\\pixel_shader_07.hlsl", currentDir);
+    swprintf_s(pixelShader08Path, L"%s\\pixel_shader_08.hlsl", currentDir);
+    swprintf_s(pixelShader09Path, L"%s\\pixel_shader_09.hlsl", currentDir);
     
     // Load vertex shader
     OutputDebugStringA("Loading vertex shader...\n");
@@ -468,8 +492,34 @@ void CreatePipelineState() {
         return;
     }
     OutputDebugStringA("Pixel shader 07 loaded successfully\n");
+    
+    // Load pixel shader 08
+    OutputDebugStringA("Loading pixel_shader_08.hlsl...\n");
+    if (FAILED(D3DCompileFromFile(pixelShader08Path, nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &g_pixelShader08, &error))) {
+        if (error) {
+            OutputDebugStringA("Pixel shader 08 compilation failed:\n");
+            OutputDebugStringA(static_cast<char*>(error->GetBufferPointer()));
+        } else {
+            OutputDebugStringA("Pixel shader 08 compilation failed with no error details\n");
+        }
+        return;
+    }
+    OutputDebugStringA("Pixel shader 08 loaded successfully\n");
+    
+    // Load pixel shader 09
+    OutputDebugStringA("Loading pixel_shader_09.hlsl...\n");
+    if (FAILED(D3DCompileFromFile(pixelShader09Path, nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &g_pixelShader09, &error))) {
+        if (error) {
+            OutputDebugStringA("Pixel shader 09 compilation failed:\n");
+            OutputDebugStringA(static_cast<char*>(error->GetBufferPointer()));
+        } else {
+            OutputDebugStringA("Pixel shader 09 compilation failed with no error details\n");
+        }
+        return;
+    }
+    OutputDebugStringA("Pixel shader 09 loaded successfully\n");
 
-    // Create initial pipeline state with the default shader (pixel_shader_07.hlsl)
+    // Create initial pipeline state with the default shader (pixel_shader_09.hlsl)
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
@@ -477,7 +527,7 @@ void CreatePipelineState() {
     psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
     psoDesc.pRootSignature = g_rootSignature.Get();
     psoDesc.VS = { g_vertexShader->GetBufferPointer(), g_vertexShader->GetBufferSize() };
-    psoDesc.PS = { g_pixelShader07->GetBufferPointer(), g_pixelShader07->GetBufferSize() };
+    psoDesc.PS = { g_pixelShader09->GetBufferPointer(), g_pixelShader09->GetBufferSize() };
     psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
     psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
@@ -637,8 +687,12 @@ void RecreatePipelineState() {
         psoDesc.PS = { g_pixelShader05->GetBufferPointer(), g_pixelShader05->GetBufferSize() };
     } else if (g_currentShader == 6) {
         psoDesc.PS = { g_pixelShader06->GetBufferPointer(), g_pixelShader06->GetBufferSize() };
-    } else {
+    } else if (g_currentShader == 7) {
         psoDesc.PS = { g_pixelShader07->GetBufferPointer(), g_pixelShader07->GetBufferSize() };
+    } else if (g_currentShader == 8) {
+        psoDesc.PS = { g_pixelShader08->GetBufferPointer(), g_pixelShader08->GetBufferSize() };
+    } else {
+        psoDesc.PS = { g_pixelShader09->GetBufferPointer(), g_pixelShader09->GetBufferSize() };
     }
     
     psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
