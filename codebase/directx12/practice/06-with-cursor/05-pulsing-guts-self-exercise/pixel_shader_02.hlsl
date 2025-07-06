@@ -45,8 +45,7 @@ float4 PSMain(PSInput input) : SV_TARGET
     const float CYCLE = sin(CRANK - distFromCenter * 6.0f) * PULSE_INTENSITY;
     
     [loop]
-    for (float i = 0.0f; i < 1.0f; i += 1.0f)
-    {
+    for (float i = 0.0f; i < 1.0f; i += 1.0f) {
         iterationPosition = mul(iterationPosition, rotationMatrix);
         //noiseOffset = mul(noiseOffset, rotationMatrix);
         //spiralOut = iterationPosition * scale;
