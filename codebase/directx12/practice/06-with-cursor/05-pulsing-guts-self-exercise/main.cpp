@@ -48,7 +48,8 @@ ComPtr<ID3DBlob> g_pixelShader01;
 ComPtr<ID3DBlob> g_pixelShader02;
 ComPtr<ID3DBlob> g_pixelShader03;
 ComPtr<ID3DBlob> g_pixelShader04;
-int g_currentShader = 4; // 0 = pixel_shader_final.hlsl, 1 = pixel_shader_01.hlsl, 2 = pixel_shader_02.hlsl, 3 = pixel_shader_03.hlsl, 4 = pixel_shader_04.hlsl (default)
+ComPtr<ID3DBlob> g_pixelShader05;
+int g_currentShader = 5; // 0 = pixel_shader_final.hlsl, 1 = pixel_shader_01.hlsl, 2 = pixel_shader_02.hlsl, 3 = pixel_shader_03.hlsl, 4 = pixel_shader_04.hlsl, 5 = pixel_shader_05.hlsl (default)
 
 // Add global for constant buffer
 struct ShaderToyConstants {
@@ -158,6 +159,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     g_currentShader = 4;
                     RecreatePipelineState();
                     OutputDebugStringA("Switched to pixel_shader_04.hlsl\n");
+                }
+                return 0;
+            }
+            else if (wParam == '5') {
+                // Switch to new shader (pixel_shader_05.hlsl)
+                if (g_currentShader != 5) {
+                    g_currentShader = 5;
+                    RecreatePipelineState();
+                    OutputDebugStringA("Switched to pixel_shader_05.hlsl\n");
                 }
                 return 0;
             }
@@ -309,12 +319,14 @@ void CreatePipelineState() {
     wchar_t pixelShader02Path[MAX_PATH];
     wchar_t pixelShader03Path[MAX_PATH];
     wchar_t pixelShader04Path[MAX_PATH];
+    wchar_t pixelShader05Path[MAX_PATH];
     swprintf_s(vertexShaderPath, L"%s\\vertex_shader.hlsl", currentDir);
     swprintf_s(pixelShaderFinalPath, L"%s\\pixel_shader_final.hlsl", currentDir);
     swprintf_s(pixelShader01Path, L"%s\\pixel_shader_01.hlsl", currentDir);
     swprintf_s(pixelShader02Path, L"%s\\pixel_shader_02.hlsl", currentDir);
     swprintf_s(pixelShader03Path, L"%s\\pixel_shader_03.hlsl", currentDir);
     swprintf_s(pixelShader04Path, L"%s\\pixel_shader_04.hlsl", currentDir);
+    swprintf_s(pixelShader05Path, L"%s\\pixel_shader_05.hlsl", currentDir);
     
     // Load vertex shader
     OutputDebugStringA("Loading vertex shader...\n");
@@ -393,8 +405,21 @@ void CreatePipelineState() {
         return;
     }
     OutputDebugStringA("Pixel shader 04 loaded successfully\n");
+    
+    // Load pixel shader 05
+    OutputDebugStringA("Loading pixel_shader_05.hlsl...\n");
+    if (FAILED(D3DCompileFromFile(pixelShader05Path, nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &g_pixelShader05, &error))) {
+        if (error) {
+            OutputDebugStringA("Pixel shader 05 compilation failed:\n");
+            OutputDebugStringA(static_cast<char*>(error->GetBufferPointer()));
+        } else {
+            OutputDebugStringA("Pixel shader 05 compilation failed with no error details\n");
+        }
+        return;
+    }
+    OutputDebugStringA("Pixel shader 05 loaded successfully\n");
 
-    // Create initial pipeline state with the default shader (pixel_shader_04.hlsl)
+    // Create initial pipeline state with the default shader (pixel_shader_05.hlsl)
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
@@ -402,7 +427,7 @@ void CreatePipelineState() {
     psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
     psoDesc.pRootSignature = g_rootSignature.Get();
     psoDesc.VS = { g_vertexShader->GetBufferPointer(), g_vertexShader->GetBufferSize() };
-    psoDesc.PS = { g_pixelShader04->GetBufferPointer(), g_pixelShader04->GetBufferSize() };
+    psoDesc.PS = { g_pixelShader05->GetBufferPointer(), g_pixelShader05->GetBufferSize() };
     psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
     psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
@@ -556,8 +581,10 @@ void RecreatePipelineState() {
         psoDesc.PS = { g_pixelShader02->GetBufferPointer(), g_pixelShader02->GetBufferSize() };
     } else if (g_currentShader == 3) {
         psoDesc.PS = { g_pixelShader03->GetBufferPointer(), g_pixelShader03->GetBufferSize() };
-    } else {
+    } else if (g_currentShader == 4) {
         psoDesc.PS = { g_pixelShader04->GetBufferPointer(), g_pixelShader04->GetBufferSize() };
+    } else {
+        psoDesc.PS = { g_pixelShader05->GetBufferPointer(), g_pixelShader05->GetBufferSize() };
     }
     
     psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
