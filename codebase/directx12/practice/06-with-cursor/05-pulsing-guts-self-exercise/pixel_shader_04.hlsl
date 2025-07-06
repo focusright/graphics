@@ -23,9 +23,7 @@ float2x2 rotate2D(float angle)
 float4 PSMain(PSInput input) : SV_TARGET
 {
     float2 fragCoord = input.position.xy;
-    // Flip Y to match ShaderToy's bottom-left origin
     fragCoord.y = iResolution.y - fragCoord.y;
-    // Normalized, centered pixel coordinates (aspect-correct)
     float2 normalizedPos = (fragCoord - 0.5f * iResolution) / iResolution.y;
     float time = iTime;
     
