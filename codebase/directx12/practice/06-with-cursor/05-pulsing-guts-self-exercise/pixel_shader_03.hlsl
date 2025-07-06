@@ -11,12 +11,6 @@ struct PSInput {
     float4 position : SV_POSITION;
 };
 
-float2x2 rotate2D(float angle) {
-    float c = cos(angle);
-    float s = sin(angle);
-    return float2x2(c, s, -s, c);
-}
-
 float4 PSMain(PSInput input) : SV_TARGET {
     float2 fragCoord = input.position.xy;
     fragCoord.y = iResolution.y - fragCoord.y;
@@ -25,7 +19,6 @@ float4 PSMain(PSInput input) : SV_TARGET {
     
     float distFromCenter = dot(normalizedPos, normalizedPos);
     float scale = 12.0f;
-    float2x2 rotationMatrix = rotate2D(5.0f);
     
     const float SPEED = 4.0f;
     const float PULSE_INTENSITY = 0.8f;
@@ -40,8 +33,7 @@ float4 PSMain(PSInput input) : SV_TARGET {
        C represents the horizontal shift
        D represents the vertical shift  */
     
-    float2 iterationPosition = mul(normalizedPos, rotationMatrix);
-    float2 spiralOut = iterationPosition * scale;
+    float2 spiralOut = normalizedPos * scale;
     float2 warpedPosition = spiralOut + CRANK + CYCLE;
     float accum = dot(cos(warpedPosition) / scale, float2(0.2f, 0.2f));
     
