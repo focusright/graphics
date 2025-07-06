@@ -1,27 +1,23 @@
 // Pixel Shader for PulsingGutsSelfExercise
 // Target: ps_5_0
 
-cbuffer Constants : register(b0)
-{
+cbuffer Constants : register(b0) {
     float2 iResolution;
-    float iTime;
-    float pad;
+    float  iTime;
+    float  pad;
 };
 
-struct PSInput
-{
+struct PSInput {
     float4 position : SV_POSITION;
 };
 
-float2x2 rotate2D(float angle)
-{
+float2x2 rotate2D(float angle) {
     float c = cos(angle);
     float s = sin(angle);
     return float2x2(c, s, -s, c);
 }
 
-float4 PSMain(PSInput input) : SV_TARGET
-{
+float4 PSMain(PSInput input) : SV_TARGET {
     float2 fragCoord = input.position.xy;
     fragCoord.y = iResolution.y - fragCoord.y;
     float2 normalizedPos = (fragCoord - 0.5f * iResolution) / iResolution.y;
@@ -43,16 +39,15 @@ float4 PSMain(PSInput input) : SV_TARGET
     const float PHASE_OFFSET = distFromCenter * FREQUENCY;
     const float CYCLE = sin(CRANK - PHASE_OFFSET) * PULSE_INTENSITY;
     
+    float iterations = 20.0f; //Change this from low to high to see lines come into focus
     [loop]
-    for (float i = 0.0f; i < 20.0f; i += 1.0f)
-    {
-        iterationPosition = mul(iterationPosition, rotationMatrix);
-        noiseOffset = mul(noiseOffset, rotationMatrix);
-        spiralOut = iterationPosition * scale;
-        warpedPosition = spiralOut + CRANK + CYCLE + i + noiseOffset;
+    for (float i = 0.0f; i < iterations; i += 1.0f) {
+        spiralOut = normalizedPos * scale;
+        warpedPosition = spiralOut + CRANK + CYCLE + i + noiseOffset; //i gives it large values
         accum += dot(cos(warpedPosition) / scale, float2(0.2f, 0.2f));
+        //Sine at large values creates rapid oscillations,
+        //wraps around the unit circle quickly and looks random
         noiseOffset -= sin(warpedPosition);
-        scale *= 1.2f;
     }
     
     const float3 ORANGE = float3(4.0f, 2.0f, 1.0f);
@@ -61,4 +56,4 @@ float4 PSMain(PSInput input) : SV_TARGET
     
     float3 finalColor = ORANGE * (accum + DIM_FACTOR) + (accum * CONTRAST) - distFromCenter;
     return float4(finalColor.x, finalColor.y, finalColor.z, 1.0f);
-}
+} 
