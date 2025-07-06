@@ -25,7 +25,6 @@ float4 PSMain(PSInput input) : SV_TARGET {
     float2 normalizedPos = (fragCoord - 0.5f * iResolution) / iResolution.y;
     float time = iTime;
     
-    float3 finalColor = float3(0.0f, 0.0f, 0.0f);
     float2 noiseOffset = float2(0.0f, 0.0f);
     float2 warpedPosition = float2(0.0f, 0.0f);
     float2 spiralOut = float2(0.0f, 0.0f);
@@ -38,7 +37,9 @@ float4 PSMain(PSInput input) : SV_TARGET {
     const float SPEED = 4.0f;
     const float PULSE_INTENSITY = 0.8f;
     const float CRANK = time * SPEED;
-    const float CYCLE = sin(CRANK - distFromCenter * 6.0f) * PULSE_INTENSITY;
+    const float FREQUENCY = 6.0f;
+    const float PHASE_OFFSET = distFromCenter * FREQUENCY;
+    const float CYCLE = sin(CRANK - PHASE_OFFSET) * PULSE_INTENSITY;
     
     [loop]
     for (float i = 0.0f; i < 20.0f; i += 1.0f) {
@@ -53,7 +54,8 @@ float4 PSMain(PSInput input) : SV_TARGET {
     
     const float3 ORANGE = float3(4.0f, 2.0f, 1.0f);
     const float CONTRAST = 2.0f;
+    const float DIM_FACTOR = 0.2f;
     
-    finalColor = ORANGE * (accum + 0.2f) + (accum * CONTRAST) - distFromCenter;
+    float3 finalColor = ORANGE * (accum + DIM_FACTOR) + (accum * CONTRAST) - distFromCenter;
     return float4(finalColor.x, finalColor.y, finalColor.z, 1.0f);
 } 
