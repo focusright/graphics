@@ -39,15 +39,15 @@ float4 PSMain(PSInput input) : SV_TARGET {
     const float PHASE_OFFSET = distFromCenter * FREQUENCY;
     const float CYCLE = sin(CRANK - PHASE_OFFSET) * PULSE_INTENSITY;
     
-    float iterations = 20.0f; //Change this from low to high to see lines come into focus
     [loop]
-    for (float i = 0.0f; i < iterations; i += 1.0f) {
-        spiralOut = normalizedPos * scale;
-        warpedPosition = spiralOut + CRANK + CYCLE + i + noiseOffset; //i gives it large values
+    for (float i = 0.0f; i < 20.f; i += 1.0f) {
+        iterationPosition = mul(iterationPosition, rotationMatrix);
+        //noiseOffset = mul(noiseOffset, rotationMatrix);
+        spiralOut = iterationPosition * scale;
+        warpedPosition = spiralOut + CRANK + CYCLE + i + noiseOffset;
         accum += dot(cos(warpedPosition) / scale, float2(0.2f, 0.2f));
-        //Sine at large values creates rapid oscillations,
-        //wraps around the unit circle quickly and looks random
-        noiseOffset -= sin(warpedPosition);
+        //noiseOffset -= sin(warpedPosition);
+        //scale *= 1.2f;
     }
     
     const float3 ORANGE = float3(4.0f, 2.0f, 1.0f);
