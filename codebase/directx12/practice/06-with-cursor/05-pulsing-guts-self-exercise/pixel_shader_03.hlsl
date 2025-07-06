@@ -19,38 +19,36 @@ float2x2 rotate2D(float angle) {
 
 float4 PSMain(PSInput input) : SV_TARGET {
     float2 fragCoord = input.position.xy;
-    // Flip Y to match ShaderToy's bottom-left origin
     fragCoord.y = iResolution.y - fragCoord.y;
-    // Normalized, centered pixel coordinates (aspect-correct)
     float2 normalizedPos = (fragCoord - 0.5f * iResolution) / iResolution.y;
     float time = iTime;
     
-    float3 finalColor = float3(0.0f, 0.0f, 0.0f);
-    float2 noiseOffset = float2(0.0f, 0.0f);
-    float2 warpedPosition = float2(0.0f, 0.0f);
-    float2 spiralOut = float2(0.0f, 0.0f);
-    float2 iterationPosition = normalizedPos;
-    float distFromCenter = dot(iterationPosition, iterationPosition);
+    float distFromCenter = dot(normalizedPos, normalizedPos);
     float scale = 12.0f;
-    float accum = 0.0f;
     float2x2 rotationMatrix = rotate2D(5.0f);
     
     const float SPEED = 4.0f;
     const float PULSE_INTENSITY = 0.8f;
     const float CRANK = time * SPEED;
-    const float CYCLE = sin(CRANK - distFromCenter * 6.0f) * PULSE_INTENSITY;
+    const float FREQUENCY = 6.0f;
+    const float PHASE_OFFSET = distFromCenter * FREQUENCY;
+    const float CYCLE = sin(CRANK - PHASE_OFFSET) * PULSE_INTENSITY;
     
-    iterationPosition = mul(iterationPosition, rotationMatrix);
-    noiseOffset = mul(noiseOffset, rotationMatrix);
-    spiralOut = iterationPosition * scale;
-    warpedPosition = spiralOut + CRANK + CYCLE + noiseOffset;
-    accum += dot(cos(warpedPosition) / scale, float2(0.2f, 0.2f));
-    noiseOffset -= sin(warpedPosition);
-    scale *= 1.2f;
+    /* In the wave equation y(t) = A * sin(Bt - C) + D: 
+       A represents the amplitude of the wave
+       B determines the frequency and period of the wave
+       C represents the horizontal shift
+       D represents the vertical shift  */
+    
+    float2 iterationPosition = mul(normalizedPos, rotationMatrix);
+    float2 spiralOut = iterationPosition * scale;
+    float2 warpedPosition = spiralOut + CRANK + CYCLE;
+    float accum = dot(cos(warpedPosition) / scale, float2(0.2f, 0.2f));
     
     const float3 ORANGE = float3(4.0f, 2.0f, 1.0f);
     const float CONTRAST = 2.0f;
+    const float DIM_FACTOR = 0.2f;
     
-    finalColor = ORANGE * (accum + 0.2f) + (accum * CONTRAST) - distFromCenter;
+    float3 finalColor = ORANGE * (accum + DIM_FACTOR) + (accum * CONTRAST) - distFromCenter;
     return float4(finalColor.x, finalColor.y, finalColor.z, 1.0f);
 } 

@@ -17,7 +17,6 @@ float4 PSMain(PSInput input) : SV_TARGET {
     float2 normalizedPos = (fragCoord - 0.5f * iResolution) / iResolution.y;
     float time = iTime;
     
-    float3 finalColor = float3(0.0f, 0.0f, 0.0f);
     float distFromCenter = dot(normalizedPos, normalizedPos);
     float scale = 12.0f;
     
@@ -51,6 +50,6 @@ float4 PSMain(PSInput input) : SV_TARGET {
     const float CONTRAST = 2.0f;
     const float DIM_FACTOR = 0.2f;
     
-    finalColor = ORANGE * (accum + DIM_FACTOR) + (accum * CONTRAST) - distFromCenter;
+    float3 finalColor = ORANGE * (accum + DIM_FACTOR) + (accum * CONTRAST) - distFromCenter;
     return float4(finalColor.x, finalColor.y, finalColor.z, 1.0f);
 }
