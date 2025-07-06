@@ -47,7 +47,7 @@ ComPtr<ID3DBlob> g_pixelShaderFinal;
 ComPtr<ID3DBlob> g_pixelShader01;
 ComPtr<ID3DBlob> g_pixelShader02;
 ComPtr<ID3DBlob> g_pixelShader03;
-int g_currentShader = 2; // 0 = pixel_shader_final.hlsl, 1 = pixel_shader_01.hlsl, 2 = pixel_shader_02.hlsl (default), 3 = pixel_shader_03.hlsl
+int g_currentShader = 3; // 0 = pixel_shader_final.hlsl, 1 = pixel_shader_01.hlsl, 2 = pixel_shader_02.hlsl, 3 = pixel_shader_03.hlsl (default)
 
 // Add global for constant buffer
 struct ShaderToyConstants {
@@ -369,7 +369,7 @@ void CreatePipelineState() {
     }
     OutputDebugStringA("Pixel shader 03 loaded successfully\n");
 
-    // Create initial pipeline state with the default shader (pixel_shader_02.hlsl)
+    // Create initial pipeline state with the default shader (pixel_shader_03.hlsl)
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
@@ -377,7 +377,7 @@ void CreatePipelineState() {
     psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
     psoDesc.pRootSignature = g_rootSignature.Get();
     psoDesc.VS = { g_vertexShader->GetBufferPointer(), g_vertexShader->GetBufferSize() };
-    psoDesc.PS = { g_pixelShader02->GetBufferPointer(), g_pixelShader02->GetBufferSize() };
+    psoDesc.PS = { g_pixelShader03->GetBufferPointer(), g_pixelShader03->GetBufferSize() };
     psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
     psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
