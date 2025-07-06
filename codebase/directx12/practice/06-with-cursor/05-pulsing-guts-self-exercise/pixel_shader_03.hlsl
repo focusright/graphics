@@ -18,7 +18,6 @@ float4 PSMain(PSInput input) : SV_TARGET {
     float time = iTime;
     
     float distFromCenter = dot(normalizedPos, normalizedPos);
-    float scale = 12.0f;
     
     const float SPEED = 4.0f;
     const float PULSE_INTENSITY = 0.8f;
@@ -33,9 +32,13 @@ float4 PSMain(PSInput input) : SV_TARGET {
        C represents the horizontal shift
        D represents the vertical shift  */
     
-    float2 spiralOut = normalizedPos * scale; //Expands the coordinate space, makes the animation stretch outward from center
+    float scale = 12.0f; //Change to negative value to spiral towards upper right corner
+    float warpScale = scale;  //scale separated into two variables in order to change
+    float colorScale = scale; //separately in experimentation. Change warpScale only to stretch the spiral effect
+    
+    float2 spiralOut = normalizedPos * warpScale; //Expands the coordinate space, makes the animation stretch outward from center
     float2 warpedPosition = spiralOut + CRANK + CYCLE; //Creates the spiral/warping visual effect
-    float accum = dot(cos(warpedPosition) / scale, float2(0.2f, 0.2f)); //Normalizes the intensity to keep values in reasonable range
+    float accum = dot(cos(warpedPosition) / colorScale, float2(0.2f, 0.2f)); //Normalizes the intensity to keep values in reasonable range
     //Divides by the same scale to "undo" the expansion
     //Prevents the color from becoming too bright or washed out
     
