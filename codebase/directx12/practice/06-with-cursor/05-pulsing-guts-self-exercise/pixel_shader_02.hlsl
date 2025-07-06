@@ -27,11 +27,8 @@ float4 PSMain(PSInput input) : SV_TARGET {
     const float CRANK = time * SPEED;
     const float CYCLE = sin(CRANK - distFromCenter * 6.0f);
     
-    [loop]
-    for (float i = 0.0f; i < 1.0f; i += 1.0f) {
-        warpedPosition =  CRANK + CYCLE + i;
-        accum += dot(cos(warpedPosition) / scale, float2(0.2f, 0.2f));
-    }
+    warpedPosition =  CRANK + CYCLE;
+    accum += dot(cos(warpedPosition) / scale, float2(0.2f, 0.2f));
     
     const float3 ORANGE = float3(4.0f, 2.0f, 1.0f);
     const float CONTRAST = 2.0f;
