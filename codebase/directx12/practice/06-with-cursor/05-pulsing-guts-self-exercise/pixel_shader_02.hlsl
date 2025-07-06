@@ -33,7 +33,7 @@ float4 PSMain(PSInput input) : SV_TARGET {
     //warpedPosition is essentially the core animation engine that drives the entire 
     //visual effect by combining temporal and spatial animation components.
     
-    const float warpedPosition =  CRANK + CYCLE;
+    const float2 warpedPosition = CRANK + CYCLE;
     const float accum = dot(cos(warpedPosition) / scale, float2(0.2f, 0.2f));
     
     /* Since the first parameter is a scalar (single float) and the second is a 2D vector,

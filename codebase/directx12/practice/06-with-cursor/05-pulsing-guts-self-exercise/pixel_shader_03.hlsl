@@ -33,9 +33,11 @@ float4 PSMain(PSInput input) : SV_TARGET {
        C represents the horizontal shift
        D represents the vertical shift  */
     
-    float2 spiralOut = normalizedPos * scale;
-    float2 warpedPosition = spiralOut + CRANK + CYCLE;
-    float accum = dot(cos(warpedPosition) / scale, float2(0.2f, 0.2f));
+    float2 spiralOut = normalizedPos * scale; //Expands the coordinate space, makes the animation stretch outward from center
+    float2 warpedPosition = spiralOut + CRANK + CYCLE; //Creates the spiral/warping visual effect
+    float accum = dot(cos(warpedPosition) / scale, float2(0.2f, 0.2f)); //Normalizes the intensity to keep values in reasonable range
+    //Divides by the same scale to "undo" the expansion
+    //Prevents the color from becoming too bright or washed out
     
     const float3 ORANGE = float3(4.0f, 2.0f, 1.0f);
     const float CONTRAST = 2.0f;
