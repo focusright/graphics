@@ -85,6 +85,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 return 0;
             }
             break;
+        case WM_SETCURSOR:
+            SetCursor(LoadCursor(nullptr, IDC_ARROW));
+            return TRUE;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }

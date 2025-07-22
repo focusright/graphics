@@ -135,6 +135,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 }
             }
             return 0;
+        case WM_SETCURSOR:
+            SetCursor(LoadCursor(nullptr, IDC_ARROW));
+            return TRUE;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
@@ -151,13 +154,21 @@ void InitializeWindow(HINSTANCE hInstance) {
     RECT windowRect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
     AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
+    // Center the window on the screen
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    int windowWidth = windowRect.right - windowRect.left;
+    int windowHeight = windowRect.bottom - windowRect.top;
+    int x = (screenWidth - windowWidth) / 2;
+    int y = (screenHeight - windowHeight) / 2;
+
     g_hwnd = CreateWindow(
         L"D3D12MouseVerticesMove",
         L"D3D12 Mouse Vertices Move",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        windowRect.right - windowRect.left,
-        windowRect.bottom - windowRect.top,
+        x, y, // Centered position
+        windowWidth,
+        windowHeight,
         nullptr,
         nullptr,
         hInstance,
