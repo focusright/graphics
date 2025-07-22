@@ -3,6 +3,7 @@
 #include <dxgi1_6.h>
 #include <d3dcompiler.h>
 #include <wrl/client.h>
+#include <vector>
 
 #include "d3dx12.h"  // For CD3DX12 helper classes
 #include <DirectXMath.h>
@@ -357,9 +358,19 @@ void CreateVertexBuffer() {
         0, 3, 1, // Left
         1, 3, 2  // Bottom
     };
+    // Assign a unique color to each face
+    XMFLOAT4 faceColors[] = {
+        XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f), // Front - Red
+        XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f), // Right - Green
+        XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f), // Left - Blue
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f)  // Bottom - Yellow
+    };
     Vertex tetrahedronFaceVertices[12];
-    for (int i = 0; i < 12; ++i) {
-        tetrahedronFaceVertices[i] = tetrahedronVertices[indices[i]];
+    for (int face = 0; face < 4; ++face) {
+        for (int v = 0; v < 3; ++v) {
+            tetrahedronFaceVertices[face * 3 + v].position = tetrahedronVertices[indices[face * 3 + v]].position;
+            tetrahedronFaceVertices[face * 3 + v].color = faceColors[face];
+        }
     }
     const UINT vertexBufferSize = sizeof(tetrahedronFaceVertices);
     CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
@@ -448,7 +459,6 @@ void CreateVertexBuffer() {
         edgeQuadVertices.push_back({f3, black});
     }
     g_edgeQuadVertexCount = (UINT)edgeQuadVertices.size();
-    CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
     CD3DX12_RESOURCE_DESC edgeQuadResDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(Vertex) * g_edgeQuadVertexCount);
     g_device->CreateCommittedResource(
         &heapProps,
@@ -459,7 +469,6 @@ void CreateVertexBuffer() {
         IID_PPV_ARGS(&g_edgeQuadVertexBuffer)
     );
     UINT8* pEdgeQuadDataBegin;
-    D3D12_RANGE readRange = { 0, 0 };
     g_edgeQuadVertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pEdgeQuadDataBegin));
     memcpy(pEdgeQuadDataBegin, edgeQuadVertices.data(), sizeof(Vertex) * g_edgeQuadVertexCount);
     g_edgeQuadVertexBuffer->Unmap(0, nullptr);
