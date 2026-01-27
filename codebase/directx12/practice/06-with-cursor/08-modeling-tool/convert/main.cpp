@@ -87,6 +87,7 @@ void DrawGrid();
 void DrawCube();
 void DrawQuads();
 void HandleKeyboard();
+void Cleanup();
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     InitializeWindow(hInstance);
@@ -110,12 +111,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             HandleKeyboard();
             UpdateConstantBuffer();
             UpdateQuadBuffer();
+            WaitForGpu();  // Wait for previous frame before resetting command list
             PopulateCommandList();
-            WaitForGpu();
             g_swapChain->Present(1, 0);
             MoveToNextFrame();
         }
     }
+
+    // Cleanup before exiting
+    Cleanup();
 
     return static_cast<int>(msg.wParam);
 }
@@ -603,6 +607,10 @@ void PopulateCommandList() {
     memcpy(pCbDataBegin, &cb, sizeof(cb));
     g_constantBuffer->Unmap(0, nullptr);
     
+    // Set descriptor heap before using descriptor tables
+    ID3D12DescriptorHeap* ppHeaps[] = { g_cbvHeap.Get() };
+    g_commandList->SetDescriptorHeaps(1, ppHeaps);
+    
     // Set descriptor table
     D3D12_GPU_DESCRIPTOR_HANDLE cbvHandle = g_cbvHeap->GetGPUDescriptorHandleForHeapStart();
     g_commandList->SetGraphicsRootDescriptorTable(0, cbvHandle);
@@ -661,30 +669,25 @@ void PopulateCommandList() {
 
     ID3D12CommandList* ppCommandLists[] = { g_commandList.Get() };
     g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+    
+    // Signal the fence after executing commands
+    const UINT64 currentFenceValue = g_fenceValue;
+    g_commandQueue->Signal(g_fence.Get(), currentFenceValue);
+    g_fenceValue++;
 }
 
 void WaitForGpu() {
-    const UINT64 fence = g_fenceValue;
-    g_commandQueue->Signal(g_fence.Get(), fence);
-    g_fenceValue++;
-
-    if (g_fence->GetCompletedValue() < fence) {
-        g_fence->SetEventOnCompletion(fence, g_fenceEvent);
+    // Wait for the previous frame to finish
+    const UINT64 fenceToWaitFor = g_fenceValue - 1;
+    if (fenceToWaitFor > 0 && g_fence->GetCompletedValue() < fenceToWaitFor) {
+        g_fence->SetEventOnCompletion(fenceToWaitFor, g_fenceEvent);
         WaitForSingleObject(g_fenceEvent, INFINITE);
     }
 }
 
 void MoveToNextFrame() {
-    const UINT64 currentFenceValue = g_fenceValue;
-    g_commandQueue->Signal(g_fence.Get(), currentFenceValue);
-    g_fenceValue++;
-
-    if (g_fence->GetCompletedValue() < currentFenceValue) {
-        g_fence->SetEventOnCompletion(currentFenceValue, g_fenceEvent);
-        WaitForSingleObject(g_fenceEvent, INFINITE);
-    }
-
-    g_frameIndex = 1 - g_frameIndex;
+    // Update frame index
+    g_frameIndex = g_swapChain->GetCurrentBackBufferIndex();
 }
 
 void UpdateConstantBuffer() {
@@ -813,4 +816,66 @@ void DrawCube() {
 
 void DrawQuads() {
     // Handled in PopulateCommandList
+}
+
+void Cleanup() {
+    // Wait for GPU to finish all work before destroying resources
+    if (g_commandQueue && g_fence) {
+        // Ensure we have at least one fence value to wait for
+        if (g_fenceValue == 0) {
+            g_fenceValue = 1;
+        }
+        
+        // Signal the fence one final time
+        const UINT64 finalFenceValue = g_fenceValue;
+        g_commandQueue->Signal(g_fence.Get(), finalFenceValue);
+        
+        // Wait for all pending work to complete
+        if (g_fenceEvent != nullptr && g_fence->GetCompletedValue() < finalFenceValue) {
+            g_fence->SetEventOnCompletion(finalFenceValue, g_fenceEvent);
+            WaitForSingleObject(g_fenceEvent, INFINITE);
+        }
+    }
+    
+    // Close the fence event handle before releasing the fence
+    if (g_fenceEvent != nullptr && g_fenceEvent != INVALID_HANDLE_VALUE) {
+        CloseHandle(g_fenceEvent);
+        g_fenceEvent = nullptr;
+    }
+    
+    // Release resources in reverse order of creation
+    // Swap chain and render targets first
+    g_swapChain.Reset();
+    g_renderTargets[0].Reset();
+    g_renderTargets[1].Reset();
+    
+    // Command list and allocator
+    g_commandList.Reset();
+    g_commandAllocator.Reset();
+    
+    // Fence (should be released after command queue)
+    g_fence.Reset();
+    
+    // Command queue
+    g_commandQueue.Reset();
+    
+    // Descriptor heaps
+    g_rtvHeap.Reset();
+    g_dsvHeap.Reset();
+    g_cbvHeap.Reset();
+    
+    // Resources
+    g_depthStencil.Reset();
+    g_vertexBufferGrid.Reset();
+    g_vertexBufferCube.Reset();
+    g_vertexBufferQuads.Reset();
+    g_constantBuffer.Reset();
+    
+    // Pipeline states and root signature
+    g_pipelineStateSolid.Reset();
+    g_pipelineStateLine.Reset();
+    g_rootSignature.Reset();
+    
+    // Device (should be last)
+    g_device.Reset();
 }
