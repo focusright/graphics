@@ -594,7 +594,8 @@ void PopulateCommandList() {
     g_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
     // Calculate view and projection matrices
-    XMMATRIX view = XMMatrixTranslation(-13.0f, 0.0f, -45.0f) * XMMatrixRotationRollPitchYaw(XM_PI / 9.0f, XM_PI / 9.0f, 0.0f);
+    // Camera position: X, Y, Z (negative Z moves camera further back)
+    XMMATRIX view = XMMatrixTranslation(-10.0f, 5.0f, 20.0f) * XMMatrixRotationRollPitchYaw(XM_PI / 9.0f, XM_PI / 9.0f, 0.0f);
     XMMATRIX proj = XMMatrixPerspectiveFovLH(XMConvertToRadians(35.0f), static_cast<float>(WINDOW_WIDTH) / WINDOW_HEIGHT, 0.1f, 1000.0f);
     XMMATRIX viewProj = XMMatrixTranspose(view * proj);
     
