@@ -1,0 +1,156 @@
+D3D12 DOJO CONTEXT HANDOFF (for Cursor)
+Date created: 2026-02-10
+User timezone: America/Los_Angeles
+
+GOAL
+You are helping me build a separate, disposable D3D12 “Dojo” project (one executable) specifically to master Direct3D 12 efficiently through controlled experimentation and intentional breakage. The dojo is NOT my main engine and is NOT meant to be merged; it is a laboratory/reference implementation. I will later port patterns manually into my engine as needed. I want freedom to experiment and intentionally break things without risking my engine baseline.
+
+KEY PHILOSOPHY
+- Mastery requires experimentation and intentionally breaking invariants.
+- The dojo is disposable and allowed to be rewritten/deleted.
+- Each milestone must produce something visible on screen or in a debug overlay.
+- Avoid large refactors; build in small, testable increments.
+- Every subsystem should be easy to stress and easy to break on purpose.
+
+THE 4 D3D12 MENTAL LAYERS (always label which layers we’re working in)
+1) Execution & Sync:
+   - command allocators, command lists, queues, fences, frame ring, frame pacing, hazards, GPU/CPU overlap
+2) Resource & Memory:
+   - heaps, upload vs default, residency, lifetime, copy patterns, state transitions, descriptor strategy
+3) Fixed-Function Pipeline:
+   - PSO state, rasterizer/depth/blend, input assembler formats, render targets/DSV, viewport/scissor
+4) Programmable/Shaders:
+   - root signatures, shader bindings, HLSL (VS/PS/CS), lighting, data layouts
+
+DOJO STRUCTURE
+- One executable: dojo.exe
+- Minimal but sane internal folder layout (can expand later):
+  src/main.cpp
+  src/platform/Win32Window.* (+ Input/Time later if needed)
+  src/gfx/DxContext.*, DxCheck.*, DxDebug.*, Swapchain.*, FrameRing.*
+  src/render/ (added later: Mesh, Pipelines, Passes, Debug overlay)
+  src/dojo/ (optional: stage selection, if we want multiple stages)
+
+- Keep shaders in a top-level /shaders folder later (flat.hlsl, shadow.hlsl, debug.hlsl).
+
+DOJO BELTS / STAGES (high-level plan)
+Belt 0: Boot + Clear (Execution&Sync + Fixed-function)
+Belt 1: Frame ring (proper per-frame allocator usage, fences, no global stalls) (Execution&Sync)
+Belt 2: Upload arena (one big upload heap, per-frame linear suballoc, fence-gated reuse) (Resource&Memory + Execution&Sync)
+Belt 3: Upload -> default heap vertex buffer, draw triangle, minimal root sig/PSO (Resource&Memory + Fixed-function + Programmable)
+Belt 4: Debug overlay + view modes (wireframe etc.), instrumentation mindset (Execution&Sync + Fixed-function)
+Belt 5: Scene + camera (support)
+Belt 6: Instancing (Programmable + Resource&Memory + Execution&Sync)
+Belt 7: Aesthetic renderer: flat shaded + fog + scalable lights (Fixed-function + Programmable)
+Belt 8: Minimal pass system / tiny frame graph (Main + Debug, later Shadow) with explicit transitions (Execution&Sync + Resource&Memory + Fixed-function)
+Belt 9: Shadow mapping (all layers)
+Belt 10: Streaming placeholder -> refined mesh, async load + safe swap, no stalls (Resource&Memory + Execution&Sync)
+Belt 11: GPU timing + hitch hunting (timestamps, graphs) (Execution&Sync + Resource&Memory)
+Belt 12: GPU-driven stepping stone (optional; later) (Programmable + Execution&Sync + Resource&Memory)
+
+DESTRUCTION CURRICULUM (4-week framing)
+Week 1 (Execution & Sync):
+- Build triple-buffer + per-frame allocators + fence model.
+- Intentionally break:
+  - reset allocator too early
+  - remove fence waits
+  - introduce artificial CPU stall vs GPU stall and compare
+- Learn allocator lifetime, fences, CPU/GPU overlap.
+
+Week 2 (Resource & Memory):
+- Build upload heap -> default heap copy for VB and triangle.
+- Build per-frame upload suballocator (“upload arena”).
+- Intentionally break:
+  - overwrite upload memory still in-flight
+  - skip state transition COPY_DEST -> VERTEX_BUFFER
+  - create many tiny committed buffers to see CPU overhead
+- Learn heap strategy, transitions, lifetime.
+
+Week 3 (Fixed-function + Pass control):
+- Build minimal passes (main, debug; shadow later).
+- Add depth buffer, fog, basic directional light.
+- Intentionally break:
+  - forget depth clear
+  - remove transitions between passes
+  - mess with rasterizer/culling state
+- Learn pass boundaries, state correctness.
+
+Week 4 (Streaming + Instrumentation):
+- Placeholder mesh shows instantly.
+- Background loads higher poly mesh and uploads.
+- Safe swap-in after GPU completion.
+- Add timestamp queries + CPU/GPU frame graphs.
+- Intentionally break:
+  - swap mesh without waiting for GPU
+  - force uploads mid-frame to create hitches
+  - overload upload arena to observe spikes
+- Learn streaming architecture and profiling.
+
+IMPORTANT OPERATING RULES
+- Never claim code exists unless we’ve created it in the dojo. No hallucinated APIs.
+- Keep functions/parameter lists on a single line.
+- When suggesting code changes, be specific and minimal. Prefer pasteable code blocks.
+- Always say which D3D12 layer(s) the step belongs to.
+
+FRANK LUNA BOOK CONNECTION
+I have read most of Frank Luna’s D3D12 book. You may anchor dojo concepts to Luna’s terminology (e.g., FrameResource pattern, upload buffers, shadow mapping chapters), but DO NOT import his entire framework wholesale. The dojo must remain minimal and destructible. Use Luna as reference scaffolding, not as a monolithic inherited codebase.
+
+WHAT I WANT NEXT
+Help me set up the dojo project in Cursor and get to a working Belt 0 baseline (clear screen) with debug layer enabled. Then proceed to Belt 1 (frame ring correctness) with intentional break exercises.
+
+============================================================
+CURSOR WORKFLOW INSTRUCTIONS (how you should collaborate)
+============================================================
+
+ASSUMPTIONS
+- I am using Cursor as my editor, on Windows.
+- I will build with Visual Studio Build Tools / MSVC (x64).
+- Prefer Windows desktop app (WinMain) but console app is acceptable if it helps logging early.
+
+HOW I WANT YOU TO RESPOND
+1) Start each response with:
+   - "Layers:" and list which of the 4 layers the step touches.
+   Example: "Layers: (1) Execution & Sync, (3) Fixed-Function"
+
+2) Then provide a short "Goal for this step" (1-2 sentences).
+
+3) Then give exact edits in ONE of these formats:
+   A) "Create file:" blocks for new files (full contents)
+   B) "Edit file:" blocks for modifications (show the exact final result, not +/- diff)
+   Keep each step small enough that I can build and run immediately.
+
+4) End with:
+   - "Expected result:" what I should see (screen output or debug messages)
+   - "Intentional break:" one small controlled break to try + what symptom to look for
+   - "Fix:" how to restore correctness
+
+BUILD/RUN INSTRUCTIONS
+- Include the exact build steps at least once:
+  - x64 / Debug
+  - which libs to link (d3d12.lib, dxgi.lib, dxguid.lib; d3dcompiler.lib optional; dxcompiler.lib only if DXC is configured)
+- If DXC is used, tell me how to set it up minimally (e.g., NuGet or copy dxcompiler.dll + dxil.dll).
+
+PROJECT SETUP PREFERENCES
+- Minimal external dependencies. No ImGui until later.
+- Enable D3D12 debug layer in Debug builds (GPU-based validation optional toggle).
+- Use DRED if convenient, but keep it optional.
+
+BUG-HUNTING DISCIPLINE
+- If something breaks, propose a short checklist:
+  - debug layer output expectations
+  - resource state expectations
+  - fence/allocator expectations
+  - swapchain/backbuffer index expectations
+- Never hand-wave: always point to a concrete invariant.
+
+STAGE/BELT SELECTION (OPTIONAL)
+- If we use multiple dojo stages, implement a simple mechanism:
+  - hardcode a stage enum in main.cpp OR
+  - number keys 1-9 to select a stage at startup
+- Keep it simple; do not build a full scene system yet.
+
+DONE CRITERIA FOR A STEP
+- It compiles.
+- It runs.
+- There is an observable proof (screen or overlay).
+- There is one intentionally breakable invariant that demonstrates the layer’s lesson.

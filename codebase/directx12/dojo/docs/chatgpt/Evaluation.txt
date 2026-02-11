@@ -1,0 +1,177 @@
+[How to objectively evaluate whether Cursor is actually reasoning better than ChatGPT during dojo sessions]
+
+🧪 How To Evaluate Cursor During D3D12 Dojo
+
+You’re not testing:
+
+“Which one writes more code?”
+
+You’re testing:
+
+“Which one understands D3D12 invariants and failure modes more deeply?”
+
+1️⃣ The Invariant Test (Most Important)
+
+After each belt, ask:
+
+“What invariant protects this system?”
+
+Examples:
+
+Frame ring → allocator must not be reset before fence completion.
+
+Upload arena → memory must not be overwritten while GPU reads it.
+
+Pass system → resource state must match usage.
+
+Shadow map → depth buffer must be cleared before reuse.
+
+If Cursor:
+
+Clearly states the invariant
+
+Explains why it exists
+
+Explains what breaks when violated
+
+Connects it to the D3D12 layer
+
+That’s strong reasoning.
+
+If it just says:
+
+“You must wait for fence because otherwise bad things happen”
+
+That’s shallow.
+
+2️⃣ The Intentional Break Test
+
+After implementing something, ask:
+
+“Give me one controlled way to break this.”
+
+If it:
+
+Suggests a precise violation
+
+Predicts symptoms (debug layer, flicker, crash, undefined behavior)
+
+Explains how to diagnose it
+
+That’s mastery-level reasoning.
+
+If it avoids breakage or hand-waves, that’s a weakness.
+
+3️⃣ The Layer Discipline Test
+
+Every step should identify which D3D12 layers are being touched.
+
+If Cursor:
+
+Blends layers without clarity
+
+Confuses memory lifetime with execution sync
+
+Treats transitions like magic
+
+That’s a red flag.
+
+You want separation like:
+
+“This change is Layer 1 only.”
+
+“This break targets Layer 2.”
+
+“Shadow pass touches all four layers.”
+
+4️⃣ The Minimalism Test
+
+D3D12 mastery = precision.
+
+If Cursor:
+
+Introduces unnecessary abstractions
+
+Adds too many classes early
+
+Creates engine-scale scaffolding
+
+Adds features before they’re required
+
+It’s drifting away from dojo discipline.
+
+The dojo must remain:
+
+Small
+
+Explicit
+
+Breakable
+
+5️⃣ The Debug Layer Test
+
+Strong D3D12 reasoning always considers:
+
+What does the debug layer say?
+
+What does DRED say?
+
+What invariant is being violated?
+
+If responses don’t mention the debug layer when relevant, that’s weak.
+
+6️⃣ The Refactor Pressure Test
+
+After Belt 2 or 3, ask:
+
+“If this were production, what would need refactoring?”
+
+A strong model will:
+
+Identify lifetime coupling
+
+Identify descriptor management issues
+
+Identify scaling limits
+
+Without overengineering prematurely.
+
+🧠 What Cursor Might Do Better
+
+Large structural edits across many files
+
+Fast refactoring
+
+Inline edits inside your editor
+
+Mechanical consistency
+
+🧠 What I Tend To Do Better
+
+Conceptual invariants
+
+Architecture reasoning
+
+Failure analysis
+
+Connecting to long-term engine implications
+
+Explaining why something matters beyond code
+
+They’re different strengths.
+
+⚖️ The Real Way To Compare
+
+After 2 belts:
+
+Come back here and paste:
+
+One explanation Cursor gave you
+
+One intentional break it suggested
+
+One architectural suggestion it made
+
+I’ll evaluate the reasoning quality, not the code formatting.
+
+If you want, I can also give you a short “mental calibration” checklist so you know when you have truly understood a belt — independent of either assistant.

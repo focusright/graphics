@@ -1,0 +1,202 @@
+============================================================
+D3D12 DOJO – CURSOR PROMPTS
+============================================================
+
+Use these prompts sequentially. Paste them into Cursor as needed.
+Each prompt assumes the D3D12_DOJO_CONTEXT.txt file is loaded in context.
+
+------------------------------------------------------------
+PROMPT 1 — Create Belt 0 Baseline
+------------------------------------------------------------
+
+Using the D3D12_DOJO_CONTEXT rules:
+
+Create Belt 0 baseline:
+- Win32 window
+- D3D12 device
+- command queue
+- swapchain (triple buffer)
+- RTV heap
+- per-frame allocator + fence
+- clear screen to dark blue
+
+Constraints:
+- Minimal folder layout
+- x64
+- Debug layer enabled in Debug builds
+- No ImGui
+- No extra abstraction layers
+
+Follow the required response structure:
+- Start with "Layers:"
+- Then "Goal for this step"
+- Then create/edit file blocks
+- Then Expected result / Intentional break / Fix
+
+
+------------------------------------------------------------
+PROMPT 2 — Belt 1: Proper Frame Ring
+------------------------------------------------------------
+
+Upgrade the current dojo baseline to Belt 1.
+
+Goal:
+- Implement correct per-frame allocator usage
+- Ensure no global WaitForGpu() per frame
+- Use fence values per frame index
+- Prevent allocator reuse before GPU completion
+
+After implementation:
+- Provide one intentional break where I reset allocator too early
+- Explain expected symptoms (debug layer, flicker, crash)
+- Then provide the fix
+
+Follow dojo output format.
+
+
+------------------------------------------------------------
+PROMPT 3 — Belt 2: Upload Arena
+------------------------------------------------------------
+
+Implement Belt 2:
+
+- One large upload heap
+- Linear suballocation per frame
+- Fence-gated reset
+- Upload a triangle vertex buffer from upload heap to default heap
+- Draw triangle
+
+After implementation:
+- Intentional break: overwrite upload memory still in flight
+- Intentional break: remove COPY_DEST -> VERTEX_BUFFER barrier
+- Explain symptoms and how to diagnose
+
+Keep everything minimal and explicit.
+
+
+------------------------------------------------------------
+PROMPT 4 — Debug Instrumentation
+------------------------------------------------------------
+
+Add minimal debug instrumentation:
+
+- Frame index
+- Fence value
+- CPU frame time
+- Placeholder for GPU timing (we will add timestamps later)
+
+No ImGui.
+You may use simple text rendering or temporary title-bar updates.
+
+Add one intentional break to observe frame pacing issues.
+
+
+------------------------------------------------------------
+PROMPT 5 — Minimal Pass System (Belt 8-lite)
+------------------------------------------------------------
+
+Add minimal pass structure:
+
+- MainPass
+- DebugPass
+- Explicit resource transitions between passes
+
+No complex frame graph.
+Manual transitions only.
+
+Afterward:
+- Intentional break: remove barrier between passes
+- Explain what artifact should occur
+
+
+------------------------------------------------------------
+PROMPT 6 — Shadow Mapping (Belt 9)
+------------------------------------------------------------
+
+Implement minimal shadow mapping:
+
+- Depth-only pass
+- Shadow map texture
+- Sample in main pass
+- Simple bias
+
+Afterward:
+- Intentional break: remove depth clear
+- Intentional break: wrong state transition
+- Explain artifacts and debug layer output
+
+
+------------------------------------------------------------
+PROMPT 7 — Streaming Placeholder (Belt 10-lite)
+------------------------------------------------------------
+
+Implement minimal streaming:
+
+- Render placeholder mesh immediately
+- Simulate async load (sleep or background thread)
+- Upload refined mesh after delay
+- Safe swap-in after GPU completion
+
+Afterward:
+- Intentional break: swap mesh without waiting for GPU
+- Explain corruption/crash scenario
+
+
+------------------------------------------------------------
+PROMPT 8 — GPU Timing (Belt 11)
+------------------------------------------------------------
+
+Add timestamp queries:
+
+- Measure GPU frame time
+- Display CPU vs GPU time
+- Detect spikes when uploading resources
+
+Afterward:
+- Intentional break: force large upload mid-frame
+- Observe GPU spike
+
+
+------------------------------------------------------------
+PROMPT 9 — Controlled Destruction Session
+------------------------------------------------------------
+
+I want a destruction-only session.
+
+Give me 3 ways to intentionally break the current dojo state that target:
+- One Execution & Sync failure
+- One Resource & Memory failure
+- One Fixed-function or Shader failure
+
+Explain:
+- What invariant I’m violating
+- What I should see
+- How to restore correctness
+
+
+------------------------------------------------------------
+PROMPT 10 — Audit the Current Code
+------------------------------------------------------------
+
+Audit the current dojo codebase.
+
+For each of the 4 D3D12 layers:
+- Identify weaknesses
+- Identify hidden technical debt
+- Identify invariants not being enforced
+- Suggest the next belt to strengthen mastery
+
+
+------------------------------------------------------------
+RULE REMINDER
+------------------------------------------------------------
+
+Always:
+- Label which D3D12 layers are involved
+- Keep changes minimal and incremental
+- Avoid inventing code that doesn’t exist
+- Provide intentional break exercises
+- Explain invariants clearly
+
+The dojo is a laboratory.
+Not a production engine.
