@@ -33,15 +33,15 @@ struct Mat4 {
     float m[4][4];
 };
 
-struct Vertex {
-    float clipX;
-    float clipY;
-    float clipZ;
-    float clipW;
-    float r;
-    float g;
-    float b;
-    float a;
+struct Vertex {  // Clip-space is the coordinate space after projection but before perspective divide
+    float clipX; // Pipeline-wise, it goes like this:
+    float clipY; // Object/world space : the tetrahedron’s original model coordinates
+    float clipZ; // View space         : after applying the camera transform
+    float clipW; // Clip-space         : after applying the projection matrix
+    float r;     // NDC (normalized device coordinates): after dividing by w
+    float g;     // Why is it called clip-space?
+    float b;     // Because before rasterization, the GPU clips primitives against boundaries expressed in terms of x, y, z, and w.
+    float a;     // If a vertex is too far outside the view frustum in clip-space, it gets clipped away
 };
 
 static Mat4 Identity() {
@@ -385,8 +385,8 @@ void App::HandleEvent(const SDL_Event& e) {
 bool App::CreateBuffers() {
     SDL_GPUBufferCreateInfo bufferInfo = {};
     bufferInfo.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
-    bufferInfo.size = sizeof(Vertex) * 12;
-    bufferInfo.props = 0;
+    bufferInfo.size = sizeof(Vertex) * 12; //3 vertices per triangle, 4 * 3 = 12
+    bufferInfo.props = 0; //duplicates vertices per face rather than indexing shared vertices, because each face has its own color and draw order
 
     m_vertexBuffer = SDL_CreateGPUBuffer(m_device, &bufferInfo);
     if (m_vertexBuffer == nullptr) {
@@ -584,9 +584,9 @@ void App::UpdateVertices(std::vector<Vertex>& outVertices, int drawableWidth, in
     const Mat4 viewWorld = Multiply(view, world);
     const Mat4 clipFromWorld = Multiply(proj, viewWorld);
 
-    struct FaceOrder {
-        int index;
-        float avgViewZ;
+    struct FaceOrder { //painter’s algorithm behavior, substitute for depth buffering
+        int index;     //manually draws farther faces first and nearer faces later
+        float avgViewZ;//for each face, an average depth value in view space, then sorts faces from farthest to nearest.
     };
 
     std::array<FaceOrder, 4> order = {};
@@ -595,7 +595,7 @@ void App::UpdateVertices(std::vector<Vertex>& outVertices, int drawableWidth, in
         const Vec4 v1 = TransformPoint(viewWorld, points[faces[i].i1]);
         const Vec4 v2 = TransformPoint(viewWorld, points[faces[i].i2]);
         order[i].index = i;
-        order[i].avgViewZ = (v0.z + v1.z + v2.z) / 3.0f;
+        order[i].avgViewZ = (v0.z + v1.z + v2.z) / 3.0f; //average(viewSpaceZ of the 3 vertices)
     }
 
     std::sort(order.begin(), order.end(), [](const FaceOrder& a, const FaceOrder& b) {
