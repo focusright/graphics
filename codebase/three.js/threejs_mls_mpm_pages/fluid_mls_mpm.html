@@ -1,0 +1,303 @@
+<!-- https://nialltl.neocities.org/articles/mpm_guide -->
+<!-- https://github.com/nialltl/incremental_mpm -->
+<!-- Converted from Unity to Three.js via ChatGPT -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MLS-MPM Fluid - Three.js</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #06131a; color: #e5e7eb; font-family: Arial, sans-serif; }
+    #info {
+      position: fixed; top: 12px; left: 12px; z-index: 10; padding: 10px 12px;
+      background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; line-height: 1.35;
+    }
+    #info b { color: #fff; }
+  </style>
+</head>
+<body>
+  <div id="info">
+    <div><b>MLS-MPM Fluid</b></div>
+    <div>Left mouse: push the fluid</div>
+    <div>Best-effort Three.js port of the Unity fluid demo</div>
+  </div>
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.161.0/build/three.module.js';
+
+    const gridRes = 64;
+    const numCells = gridRes * gridRes;
+    const dt = 0.2;
+    const iterations = 5;
+    const gravity = -0.3;
+    const restDensity = 4.0;
+    const dynamicViscosity = 0.1;
+    const eosStiffness = 10.0;
+    const eosPower = 4;
+    const mouseRadius = 10.0;
+
+    const particles = [];
+    const gridMass = new Float32Array(numCells);
+    const gridVX = new Float32Array(numCells);
+    const gridVY = new Float32Array(numCells);
+    const weightsX = new Float32Array(3);
+    const weightsY = new Float32Array(3);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x06131a);
+
+    const aspect = window.innerWidth / window.innerHeight;
+    const frustum = gridRes * 0.55;
+    const camera = new THREE.OrthographicCamera(-frustum * aspect, frustum * aspect, frustum, -frustum, 0.1, 1000);
+    camera.position.set(gridRes * 0.5, gridRes * 0.5, 100);
+    camera.lookAt(gridRes * 0.5, gridRes * 0.5, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const particleGeometry = new THREE.BufferGeometry();
+    const particlePositions = [];
+    const particleColors = [];
+
+    function nextLowerPowerOfTwo(n) {
+      let p = 1;
+      while (p <= n) { p <<= 1; }
+      return p >> 1;
+    }
+
+    const tempPositions = [];
+    (function initParticles() {
+      const spacing = 0.5;
+      const boxX = 32;
+      const boxY = 32;
+      const sx = gridRes / 2.0;
+      const sy = gridRes / 2.0;
+      for (let i = sx - boxX / 2; i < sx + boxX / 2; i += spacing) {
+        for (let j = sy - boxY / 2; j < sy + boxY / 2; j += spacing) {
+          tempPositions.push([i, j]);
+        }
+      }
+      const count = nextLowerPowerOfTwo(tempPositions.length);
+      for (let i = 0; i < count; ++i) {
+        const [x, y] = tempPositions[i];
+        particles.push({ x, y, vx: 0, vy: 0, C00: 0, C01: 0, C10: 0, C11: 0, mass: 1.0 });
+        particlePositions.push(x, y, 0);
+        const color = new THREE.Color().setHSL(0.53 + Math.random() * 0.04, 0.95, 0.6 + Math.random() * 0.05);
+        particleColors.push(color.r, color.g, color.b);
+      }
+    })();
+
+    particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(particlePositions, 3));
+    particleGeometry.setAttribute('color', new THREE.Float32BufferAttribute(particleColors, 3));
+    const points = new THREE.Points(particleGeometry, new THREE.PointsMaterial({ size: 4.5, sizeAttenuation: false, vertexColors: true }));
+    scene.add(points);
+
+    const borderGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(gridRes, gridRes));
+    const border = new THREE.LineSegments(borderGeo, new THREE.LineBasicMaterial({ color: 0x4b5563 }));
+    border.position.set(gridRes * 0.5, gridRes * 0.5, -1);
+    scene.add(border);
+
+    const mouse = { down: false, x: 0, y: 0 };
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function computeWeights(px, py) {
+      const cellX = Math.floor(px);
+      const cellY = Math.floor(py);
+      const diffX = (px - cellX) - 0.5;
+      const diffY = (py - cellY) - 0.5;
+      weightsX[0] = 0.5 * (0.5 - diffX) * (0.5 - diffX);
+      weightsX[1] = 0.75 - diffX * diffX;
+      weightsX[2] = 0.5 * (0.5 + diffX) * (0.5 + diffX);
+      weightsY[0] = 0.5 * (0.5 - diffY) * (0.5 - diffY);
+      weightsY[1] = 0.75 - diffY * diffY;
+      weightsY[2] = 0.5 * (0.5 + diffY) * (0.5 + diffY);
+      return { cellX, cellY };
+    }
+
+    function simulateStep() {
+      gridMass.fill(0);
+      gridVX.fill(0);
+      gridVY.fill(0);
+
+      for (const p of particles) {
+        const { cellX, cellY } = computeWeights(p.x, p.y);
+        for (let gx = 0; gx < 3; ++gx) {
+          for (let gy = 0; gy < 3; ++gy) {
+            const weight = weightsX[gx] * weightsY[gy];
+            const ix = cellX + gx - 1;
+            const iy = cellY + gy - 1;
+            if (ix < 0 || ix >= gridRes || iy < 0 || iy >= gridRes) { continue; }
+            const cellDistX = (ix - p.x) + 0.5;
+            const cellDistY = (iy - p.y) + 0.5;
+            const qx = p.C00 * cellDistX + p.C01 * cellDistY;
+            const qy = p.C10 * cellDistX + p.C11 * cellDistY;
+            const massContrib = weight * p.mass;
+            const index = ix * gridRes + iy;
+            gridMass[index] += massContrib;
+            gridVX[index] += massContrib * (p.vx + qx);
+            gridVY[index] += massContrib * (p.vy + qy);
+          }
+        }
+      }
+
+      for (const p of particles) {
+        const { cellX, cellY } = computeWeights(p.x, p.y);
+        let density = 0.0;
+        for (let gx = 0; gx < 3; ++gx) {
+          for (let gy = 0; gy < 3; ++gy) {
+            const ix = cellX + gx - 1;
+            const iy = cellY + gy - 1;
+            if (ix < 0 || ix >= gridRes || iy < 0 || iy >= gridRes) { continue; }
+            density += gridMass[ix * gridRes + iy] * weightsX[gx] * weightsY[gy];
+          }
+        }
+        density = Math.max(density, 1e-6);
+        const volume = p.mass / density;
+        const pressure = Math.max(-0.1, eosStiffness * (Math.pow(density / restDensity, eosPower) - 1));
+
+        let strain00 = p.C00;
+        let strain01 = p.C01;
+        let strain10 = p.C10;
+        let strain11 = p.C11;
+        const trace = strain01 + strain10;
+        strain01 = trace;
+        strain10 = trace;
+
+        const stress00 = -pressure + dynamicViscosity * strain00;
+        const stress01 = dynamicViscosity * strain01;
+        const stress10 = dynamicViscosity * strain10;
+        const stress11 = -pressure + dynamicViscosity * strain11;
+
+        const eq00 = -volume * 4 * stress00 * dt;
+        const eq01 = -volume * 4 * stress01 * dt;
+        const eq10 = -volume * 4 * stress10 * dt;
+        const eq11 = -volume * 4 * stress11 * dt;
+
+        for (let gx = 0; gx < 3; ++gx) {
+          for (let gy = 0; gy < 3; ++gy) {
+            const weight = weightsX[gx] * weightsY[gy];
+            const ix = cellX + gx - 1;
+            const iy = cellY + gy - 1;
+            if (ix < 0 || ix >= gridRes || iy < 0 || iy >= gridRes) { continue; }
+            const index = ix * gridRes + iy;
+            const cellDistX = (ix - p.x) + 0.5;
+            const cellDistY = (iy - p.y) + 0.5;
+            gridVX[index] += (eq00 * weight) * cellDistX + (eq01 * weight) * cellDistY;
+            gridVY[index] += (eq10 * weight) * cellDistX + (eq11 * weight) * cellDistY;
+          }
+        }
+      }
+
+      for (let i = 0; i < numCells; ++i) {
+        const mass = gridMass[i];
+        if (mass <= 0) { continue; }
+        let vx = gridVX[i] / mass;
+        let vy = gridVY[i] / mass + dt * gravity;
+        const x = Math.floor(i / gridRes);
+        const y = i % gridRes;
+        if (x < 2 || x > gridRes - 3) { vx = 0; }
+        if (y < 2 || y > gridRes - 3) { vy = 0; }
+        gridVX[i] = vx;
+        gridVY[i] = vy;
+      }
+
+      const posAttr = particleGeometry.getAttribute('position');
+      for (let i = 0; i < particles.length; ++i) {
+        const p = particles[i];
+        p.vx = 0;
+        p.vy = 0;
+        const { cellX, cellY } = computeWeights(p.x, p.y);
+        let B00 = 0, B01 = 0, B10 = 0, B11 = 0;
+
+        for (let gx = 0; gx < 3; ++gx) {
+          for (let gy = 0; gy < 3; ++gy) {
+            const weight = weightsX[gx] * weightsY[gy];
+            const ix = cellX + gx - 1;
+            const iy = cellY + gy - 1;
+            if (ix < 0 || ix >= gridRes || iy < 0 || iy >= gridRes) { continue; }
+            const index = ix * gridRes + iy;
+            const distX = (ix - p.x) + 0.5;
+            const distY = (iy - p.y) + 0.5;
+            const weightedVX = gridVX[index] * weight;
+            const weightedVY = gridVY[index] * weight;
+            B00 += weightedVX * distX;
+            B01 += weightedVX * distY;
+            B10 += weightedVY * distX;
+            B11 += weightedVY * distY;
+            p.vx += weightedVX;
+            p.vy += weightedVY;
+          }
+        }
+
+        p.C00 = B00 * 4;
+        p.C01 = B01 * 4;
+        p.C10 = B10 * 4;
+        p.C11 = B11 * 4;
+
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.x = clamp(p.x, 1, gridRes - 2);
+        p.y = clamp(p.y, 1, gridRes - 2);
+
+        if (mouse.down) {
+          const dx = p.x - mouse.x;
+          const dy = p.y - mouse.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < mouseRadius * mouseRadius && d2 > 1e-8) {
+            const invLen = 1 / Math.sqrt(d2);
+            p.vx += dx * invLen;
+            p.vy += dy * invLen;
+          }
+        }
+
+        const xnX = p.x + p.vx;
+        const xnY = p.y + p.vy;
+        const wallMin = 3;
+        const wallMax = gridRes - 4;
+        if (xnX < wallMin) { p.vx += wallMin - xnX; }
+        if (xnX > wallMax) { p.vx += wallMax - xnX; }
+        if (xnY < wallMin) { p.vy += wallMin - xnY; }
+        if (xnY > wallMax) { p.vy += wallMax - xnY; }
+
+        posAttr.setXYZ(i, p.x, p.y, 0);
+      }
+      posAttr.needsUpdate = true;
+    }
+
+    function screenToGrid(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const nx = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const ny = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+      const wx = gridRes * 0.5 + nx * frustum * (window.innerWidth / window.innerHeight);
+      const wy = gridRes * 0.5 + ny * frustum;
+      mouse.x = wx;
+      mouse.y = wy;
+    }
+
+    renderer.domElement.addEventListener('pointerdown', (event) => { mouse.down = true; screenToGrid(event); });
+    renderer.domElement.addEventListener('pointermove', (event) => { screenToGrid(event); });
+    window.addEventListener('pointerup', () => { mouse.down = false; });
+    window.addEventListener('resize', () => {
+      const aspectNow = window.innerWidth / window.innerHeight;
+      camera.left = -frustum * aspectNow;
+      camera.right = frustum * aspectNow;
+      camera.top = frustum;
+      camera.bottom = -frustum;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      for (let i = 0; i < iterations; ++i) { simulateStep(); }
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
