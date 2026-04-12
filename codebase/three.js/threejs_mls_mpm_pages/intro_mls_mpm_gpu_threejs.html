@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MLS-MPM Intro - Three.js WebGPU Compute</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; color: #e5e7eb; font-family: Arial, sans-serif; }
+    #info {
+      position: fixed; top: 12px; left: 12px; z-index: 10; padding: 10px 12px;
+      background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+      line-height: 1.35;
+    }
+    #info b { color: #fff; }
+  </style>
+</head>
+<body>
+  <div id="info">
+    <div><b>MLS-MPM Intro - GPU Compute</b></div>
+    <div>Left mouse: repulse particles</div>
+    <div>Three.js WebGPU compute port with the original sim stages kept intact</div>
+  </div>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.183.0/build/three.module.js",
+        "three/webgpu": "https://unpkg.com/three@0.183.0/build/three.webgpu.js",
+        "three/tsl": "https://unpkg.com/three@0.183.0/build/three.tsl.js",
+        "three/addons/": "https://unpkg.com/three@0.183.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'three/webgpu';
+    import WebGPU from 'three/addons/capabilities/WebGPU.js';
+    import { attributeArray, uniform, wgslFn, instanceIndex } from 'three/tsl';
+
+    if (WebGPU.isAvailable() === false) {
+      document.body.appendChild(WebGPU.getErrorMessage());
+      throw new Error('WebGPU not available');
+    }
+
+    const gridRes = 64;
+    const numCells = gridRes * gridRes;
+    const dt = 1.0;
+    const iterations = 1;
+    const gravity = -0.05;
+    const mouseRadius = 10.0;
+
+    const particleData = [];
+    const particlePosInit = [];
+    const particleVelInit = [];
+    const particleAffine0Init = [];
+    const particleAffine1Init = [];
+    const particleMassInit = [];
+    const particleColorInit = [];
+
+    function rand(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function pushParticle(x, y, vx, vy) {
+      particleData.push({ x, y, vx, vy });
+      particlePosInit.push(x, y, 0, 0);
+      particleVelInit.push(vx, vy, 0, 0);
+      particleAffine0Init.push(0, 0, 0, 0);
+      particleAffine1Init.push(0, 0, 0, 0);
+      particleMassInit.push(1, 0, 0, 0);
+
+      const color = new THREE.Color().setHSL(0.56 + rand(-0.03, 0.03), 0.8, 0.62 + rand(-0.05, 0.05));
+      particleColorInit.push(color.r, color.g, color.b, 1);
+    }
+
+    (function initParticles() {
+      const spacing = 1.0;
+      const boxX = 16;
+      const boxY = 16;
+      const sx = gridRes / 2.0;
+      const sy = gridRes / 2.0;
+
+      for (let i = sx - boxX / 2; i < sx + boxX / 2; i += spacing) {
+        for (let j = sy - boxY / 2; j < sy + boxY / 2; j += spacing) {
+          pushParticle(i, j, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5 + 2.75) * 0.5);
+        }
+      }
+    })();
+
+    const numParticles = particlePosInit.length / 4;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b1020);
+
+    const aspect = window.innerWidth / window.innerHeight;
+    const frustum = gridRes * 0.55;
+    const camera = new THREE.OrthographicCamera(-frustum * aspect, frustum * aspect, frustum, -frustum, 0.1, 1000);
+    camera.position.set(gridRes * 0.5, gridRes * 0.5, 100);
+    camera.lookAt(gridRes * 0.5, gridRes * 0.5, 0);
+
+    const renderer = new THREE.WebGPURenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    await renderer.init();
+
+    const mouseState = uniform(new THREE.Vector4(0, 0, 0, mouseRadius));
+
+    const particlePosBuffer = attributeArray(new Float32Array(particlePosInit), 'vec4');
+    const particleVelBuffer = attributeArray(new Float32Array(particleVelInit), 'vec4');
+    const particleAffine0Buffer = attributeArray(new Float32Array(particleAffine0Init), 'vec4');
+    const particleAffine1Buffer = attributeArray(new Float32Array(particleAffine1Init), 'vec4');
+    const particleMassBuffer = attributeArray(new Float32Array(particleMassInit), 'vec4');
+    const particleColorBuffer = attributeArray(new Float32Array(particleColorInit), 'vec4');
+    const gridBuffer = attributeArray(new Float32Array(numCells * 4), 'vec4');
+
+    const dummyPositions = new Float32Array(numParticles * 3);
+    const particleGeometry = new THREE.BufferGeometry();
+    particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(dummyPositions, 3));
+
+    const particleMaterial = new THREE.PointsNodeMaterial();
+    particleMaterial.positionNode = particlePosBuffer.toAttribute().xyz;
+    particleMaterial.colorNode = particleColorBuffer.toAttribute().xyz;
+    particleMaterial.transparent = false;
+
+    const points = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(points);
+
+    const borderGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(gridRes, gridRes));
+    const border = new THREE.LineSegments(borderGeo, new THREE.LineBasicMaterial({ color: 0x4b5563 }));
+    border.position.set(gridRes * 0.5, gridRes * 0.5, -1);
+    scene.add(border);
+
+    const gridGatherPass = wgslFn(`
+      fn gridGatherKernel(
+        index: u32,
+        grid: ptr<storage, array<vec4<f32>>, read_write>,
+        particlePos: ptr<storage, array<vec4<f32>>, read_write>,
+        particleVel: ptr<storage, array<vec4<f32>>, read_write>,
+        particleAffine0: ptr<storage, array<vec4<f32>>, read_write>,
+        particleAffine1: ptr<storage, array<vec4<f32>>, read_write>,
+        particleMass: ptr<storage, array<vec4<f32>>, read_write>
+      ) -> void {
+        if (index >= ${numCells}u) {
+          return;
+        }
+
+        let cellX: i32 = i32(index / ${gridRes}u);
+        let cellY: i32 = i32(index % ${gridRes}u);
+
+        var mass: f32 = 0.0;
+        var velX: f32 = 0.0;
+        var velY: f32 = 0.0;
+
+        for (var p: u32 = 0u; p < ${numParticles}u; p = p + 1u) {
+          let pos = particlePos[p];
+          let vel = particleVel[p];
+          let aff0 = particleAffine0[p];
+          let aff1 = particleAffine1[p];
+          let massValue = particleMass[p].x;
+
+          let baseX: i32 = i32(floor(pos.x));
+          let baseY: i32 = i32(floor(pos.y));
+          let gx: i32 = cellX - baseX + 1;
+          let gy: i32 = cellY - baseY + 1;
+
+          if (gx < 0 || gx > 2 || gy < 0 || gy > 2) {
+            continue;
+          }
+
+          let diffX = (pos.x - floor(pos.x)) - 0.5;
+          let diffY = (pos.y - floor(pos.y)) - 0.5;
+
+          let wx = vec3<f32>(
+            0.5 * (0.5 - diffX) * (0.5 - diffX),
+            0.75 - diffX * diffX,
+            0.5 * (0.5 + diffX) * (0.5 + diffX)
+          );
+
+          let wy = vec3<f32>(
+            0.5 * (0.5 - diffY) * (0.5 - diffY),
+            0.75 - diffY * diffY,
+            0.5 * (0.5 + diffY) * (0.5 + diffY)
+          );
+
+          let weight = wx[gx] * wy[gy];
+          let cellDistX = (f32(cellX) - pos.x) + 0.5;
+          let cellDistY = (f32(cellY) - pos.y) + 0.5;
+          let qx = aff0.x * cellDistX + aff0.y * cellDistY;
+          let qy = aff1.x * cellDistX + aff1.y * cellDistY;
+          let massContrib = weight * massValue;
+
+          mass = mass + massContrib;
+          velX = velX + massContrib * (vel.x + qx);
+          velY = velY + massContrib * (vel.y + qy);
+        }
+
+        grid[index] = vec4<f32>(mass, velX, velY, 0.0);
+      }
+    `)({
+      index: instanceIndex,
+      grid: gridBuffer,
+      particlePos: particlePosBuffer,
+      particleVel: particleVelBuffer,
+      particleAffine0: particleAffine0Buffer,
+      particleAffine1: particleAffine1Buffer,
+      particleMass: particleMassBuffer
+    }).compute(numCells);
+
+    const gridUpdatePass = wgslFn(`
+      fn gridUpdateKernel(index: u32, grid: ptr<storage, array<vec4<f32>>, read_write>) -> void {
+        if (index >= ${numCells}u) {
+          return;
+        }
+
+        var state = grid[index];
+        let mass = state.x;
+        var vx = state.y;
+        var vy = state.z;
+
+        if (mass > 0.0) {
+          vx = vx / mass;
+          vy = vy / mass + ${dt * gravity};
+
+          let x: i32 = i32(index / ${gridRes}u);
+          let y: i32 = i32(index % ${gridRes}u);
+
+          if (x < 2 || x > ${gridRes - 3}) {
+            vx = 0.0;
+          }
+
+          if (y < 2 || y > ${gridRes - 3}) {
+            vy = 0.0;
+          }
+        }
+
+        grid[index] = vec4<f32>(mass, vx, vy, 0.0);
+      }
+    `)({
+      index: instanceIndex,
+      grid: gridBuffer
+    }).compute(numCells);
+
+    const particleUpdatePass = wgslFn(`
+      fn particleUpdateKernel(
+        index: u32,
+        mouse: vec4<f32>,
+        grid: ptr<storage, array<vec4<f32>>, read_write>,
+        particlePos: ptr<storage, array<vec4<f32>>, read_write>,
+        particleVel: ptr<storage, array<vec4<f32>>, read_write>,
+        particleAffine0: ptr<storage, array<vec4<f32>>, read_write>,
+        particleAffine1: ptr<storage, array<vec4<f32>>, read_write>
+      ) -> void {
+        if (index >= ${numParticles}u) {
+          return;
+        }
+
+        var pos = particlePos[index];
+        var vel = particleVel[index];
+        var aff0 = particleAffine0[index];
+        var aff1 = particleAffine1[index];
+
+        vel = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+
+        let cellX: i32 = i32(floor(pos.x));
+        let cellY: i32 = i32(floor(pos.y));
+        let diffX = (pos.x - floor(pos.x)) - 0.5;
+        let diffY = (pos.y - floor(pos.y)) - 0.5;
+
+        let wx = vec3<f32>(
+          0.5 * (0.5 - diffX) * (0.5 - diffX),
+          0.75 - diffX * diffX,
+          0.5 * (0.5 + diffX) * (0.5 + diffX)
+        );
+
+        let wy = vec3<f32>(
+          0.5 * (0.5 - diffY) * (0.5 - diffY),
+          0.75 - diffY * diffY,
+          0.5 * (0.5 + diffY) * (0.5 + diffY)
+        );
+
+        var B00: f32 = 0.0;
+        var B01: f32 = 0.0;
+        var B10: f32 = 0.0;
+        var B11: f32 = 0.0;
+
+        for (var gx: i32 = 0; gx < 3; gx = gx + 1) {
+          for (var gy: i32 = 0; gy < 3; gy = gy + 1) {
+            let ix = cellX + gx - 1;
+            let iy = cellY + gy - 1;
+
+            if (ix < 0 || ix >= ${gridRes} || iy < 0 || iy >= ${gridRes}) {
+              continue;
+            }
+
+            let weight = wx[gx] * wy[gy];
+            let gridIndex: u32 = u32(ix * ${gridRes} + iy);
+            let gridState = grid[gridIndex];
+            let distX = (f32(ix) - pos.x) + 0.5;
+            let distY = (f32(iy) - pos.y) + 0.5;
+            let weightedVX = gridState.y * weight;
+            let weightedVY = gridState.z * weight;
+
+            B00 = B00 + weightedVX * distX;
+            B01 = B01 + weightedVX * distY;
+            B10 = B10 + weightedVY * distX;
+            B11 = B11 + weightedVY * distY;
+
+            vel.x = vel.x + weightedVX;
+            vel.y = vel.y + weightedVY;
+          }
+        }
+
+        aff0 = vec4<f32>(B00 * 4.0, B01 * 4.0, 0.0, 0.0);
+        aff1 = vec4<f32>(B10 * 4.0, B11 * 4.0, 0.0, 0.0);
+
+        pos.x = pos.x + vel.x * ${dt};
+        pos.y = pos.y + vel.y * ${dt};
+        pos.x = clamp(pos.x, 1.0, ${gridRes - 2}.0);
+        pos.y = clamp(pos.y, 1.0, ${gridRes - 2}.0);
+
+        if (mouse.z > 0.5) {
+          let dx = pos.x - mouse.x;
+          let dy = pos.y - mouse.y;
+          let d2 = dx * dx + dy * dy;
+          let r2 = mouse.w * mouse.w;
+
+          if (d2 < r2 && d2 > 1e-8) {
+            var normFactor = sqrt(d2) / mouse.w;
+            normFactor = pow(sqrt(normFactor), 8.0);
+            let invLen = inverseSqrt(d2);
+            vel.x = vel.x + dx * invLen * normFactor * 0.5;
+            vel.y = vel.y + dy * invLen * normFactor * 0.5;
+          }
+        }
+
+        particlePos[index] = pos;
+        particleVel[index] = vel;
+        particleAffine0[index] = aff0;
+        particleAffine1[index] = aff1;
+      }
+    `)({
+      index: instanceIndex,
+      mouse: mouseState,
+      grid: gridBuffer,
+      particlePos: particlePosBuffer,
+      particleVel: particleVelBuffer,
+      particleAffine0: particleAffine0Buffer,
+      particleAffine1: particleAffine1Buffer
+    }).compute(numParticles);
+
+    const mouse = { down: false, x: 0, y: 0 };
+
+    function screenToGrid(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const nx = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const ny = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+      const wx = gridRes * 0.5 + nx * frustum * (window.innerWidth / window.innerHeight);
+      const wy = gridRes * 0.5 + ny * frustum;
+      mouse.x = wx;
+      mouse.y = wy;
+      mouseState.value.set(wx, wy, mouse.down ? 1 : 0, mouseRadius);
+    }
+
+    renderer.domElement.addEventListener('pointerdown', (event) => {
+      mouse.down = true;
+      screenToGrid(event);
+      mouseState.value.z = 1;
+    });
+
+    renderer.domElement.addEventListener('pointermove', (event) => {
+      screenToGrid(event);
+    });
+
+    window.addEventListener('pointerup', () => {
+      mouse.down = false;
+      mouseState.value.z = 0;
+    });
+
+    window.addEventListener('resize', () => {
+      const aspectNow = window.innerWidth / window.innerHeight;
+      camera.left = -frustum * aspectNow;
+      camera.right = frustum * aspectNow;
+      camera.top = frustum;
+      camera.bottom = -frustum;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    renderer.setAnimationLoop(async () => {
+      for (let i = 0; i < iterations; ++i) {
+        await renderer.computeAsync(gridGatherPass);
+        await renderer.computeAsync(gridUpdatePass);
+        await renderer.computeAsync(particleUpdatePass);
+      }
+
+      renderer.render(scene, camera);
+    });
+  </script>
+</body>
+</html>
