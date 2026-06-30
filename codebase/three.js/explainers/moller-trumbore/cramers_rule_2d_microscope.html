@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cramer's Rule 2D Microscope - Three.js + MathJax</title>
+
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['\\(', '\\)'], ['$', '$']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <style>
+        :root {
+            --bg: #0f1218;
+            --panel: #171b24;
+            --panel2: #202634;
+            --ink: #eef3ff;
+            --muted: #aeb8cc;
+            --line: #303849;
+            --accent: #78a6ff;
+            --warning: #ffcf6e;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            line-height: 1.45;
+        }
+
+        header {
+            padding: 18px 22px 12px;
+            border-bottom: 1px solid var(--line);
+            background: linear-gradient(180deg, #171b24, #11151d);
+        }
+
+        h1 {
+            margin: 0 0 6px;
+            font-size: 24px;
+            letter-spacing: 0.2px;
+        }
+
+        header p {
+            margin: 0;
+            color: var(--muted);
+            max-width: 1100px;
+        }
+
+        #app {
+            display: grid;
+            grid-template-columns: minmax(560px, 58vw) minmax(390px, 1fr);
+            min-height: 720px;
+        }
+
+        #viewportWrap {
+            position: sticky;
+            top: 0;
+            height: calc(100vh - 86px);
+            min-height: 640px;
+            border-right: 1px solid var(--line);
+            background: #0b0e14;
+        }
+
+        #viewport {
+            position: absolute;
+            inset: 0;
+        }
+
+        #hud {
+            position: absolute;
+            left: 12px;
+            top: 12px;
+            width: min(440px, calc(100% - 24px));
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            background: rgba(15, 18, 24, 0.82);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        }
+
+        #hud h2 {
+            margin: 0 0 8px;
+            font-size: 16px;
+        }
+
+        .buttonRow {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            border: 1px solid #3e4a61;
+            border-radius: 8px;
+            background: #202739;
+            color: var(--ink);
+            padding: 6px 9px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        button:hover { background: #29324a; }
+        button.active { background: #37538d; border-color: #6d97ee; }
+
+        #liveValues {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 4px 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+            color: #d7e2ff;
+        }
+
+        #liveValues .key { color: var(--muted); }
+        #liveValues .warn { color: var(--warning); grid-column: 1 / -1; margin-top: 6px; }
+
+        #legend {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .swatch {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+            vertical-align: -1px;
+        }
+
+        #docs {
+            padding: 18px;
+            overflow: auto;
+        }
+
+        .card {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: var(--panel);
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .card h2 {
+            margin: 0;
+            padding: 14px 16px;
+            font-size: 18px;
+            border-bottom: 1px solid var(--line);
+            background: var(--panel2);
+        }
+
+        .cardIntro {
+            padding: 14px 16px;
+            color: var(--muted);
+        }
+
+        .docGrid {
+            display: grid;
+            grid-template-columns: minmax(320px, 1.05fr) minmax(320px, 1fr);
+            border-top: 1px solid var(--line);
+        }
+
+        pre {
+            margin: 0;
+            padding: 14px;
+            overflow: auto;
+            background: #0b0e14;
+            border-right: 1px solid var(--line);
+            min-height: 100%;
+        }
+
+        code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+            color: #dbe7ff;
+        }
+
+        .mathText {
+            padding: 14px 16px 18px;
+            color: #edf3ff;
+        }
+
+        .mathText p { margin: 0 0 12px; }
+        .mathText ul { margin-top: 6px; padding-left: 20px; }
+        .mathText strong { color: #ffffff; }
+        .mathText .small { color: var(--muted); font-size: 13px; }
+
+        .tip {
+            margin-top: 8px;
+            padding: 10px 12px;
+            border-left: 3px solid var(--accent);
+            background: rgba(120, 166, 255, 0.08);
+            color: #dbe6ff;
+        }
+
+        @media (max-width: 1040px) {
+            #app { grid-template-columns: 1fr; }
+            #viewportWrap { position: relative; height: 680px; border-right: 0; border-bottom: 1px solid var(--line); }
+            .docGrid { grid-template-columns: 1fr; }
+            pre { border-right: 0; border-bottom: 1px solid var(--line); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Cramer's Rule 2D Microscope</h1>
+        <p>
+            Drag the vector endpoints in the 3D scene. The page reflects the actual JavaScript math functions, then renders MathJax beside them to explain why replacing a column isolates one coordinate.
+        </p>
+    </header>
+
+    <main id="app">
+        <section id="viewportWrap">
+            <div id="viewport"></div>
+            <div id="hud">
+                <h2>Interactive View</h2>
+                <div class="buttonRow" id="modeButtons"></div>
+                <div class="buttonRow">
+                    <button id="resetBtn">Reset</button>
+                    <button id="degenerateBtn">Near-degenerate demo</button>
+                </div>
+                <div id="liveValues"></div>
+                <div id="legend">
+                    <span><span class="swatch" style="background:#4f8dff"></span>A0</span>
+                    <span><span class="swatch" style="background:#ffad42"></span>A1</span>
+                    <span><span class="swatch" style="background:#ff5ee7"></span>C</span>
+                    <span><span class="swatch" style="background:#56e39f"></span>xA0 survives for x</span>
+                    <span><span class="swatch" style="background:#b785ff"></span>yA1 survives for y</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="docs">
+            <div class="card">
+                <h2>What this page is trying to burn into your brain</h2>
+                <div class="cardIntro">
+                    <p>
+                        In two dimensions, Cramer's rule works because the determinant is linear in each vector slot.
+                        When you compute \(\det(C, A_1)\), and \(C = xA_0 + yA_1\), the \(yA_1\) part becomes \(\det(yA_1, A_1)\), which is zero because two parallel sides make no area.
+                    </p>
+                    <p>
+                        So the determinant acts like a coordinate filter: pairing with \(A_1\) kills the \(A_1\) component and leaves the \(A_0\) component. Pairing with \(A_0\) does the opposite.
+                    </p>
+                </div>
+            </div>
+
+            <div id="explanations"></div>
+        </section>
+    </main>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ============================================================================
+// MATH CORE: these functions are intentionally small, pure, and readable.
+// The documentation panel below reflects these exact functions with fn.toString().
+// ============================================================================
+
+function vec2(x, y) {
+    return { x, y };
+}
+
+function add2(a, b) {
+    return { x: a.x + b.x, y: a.y + b.y };
+}
+
+function sub2(a, b) {
+    return { x: a.x - b.x, y: a.y - b.y };
+}
+
+function scale2(a, s) {
+    return { x: a.x * s, y: a.y * s };
+}
+
+function det2(a, b) {
+    // Signed area of the parallelogram whose sides are a and b.
+    // Positive means b is counterclockwise from a.
+    // Negative means the orientation is flipped.
+    return a.x * b.y - a.y * b.x;
+}
+
+function solveCramer2(A0, A1, C) {
+    // We are solving: C = x*A0 + y*A1.
+    // The matrix columns are A0 and A1.
+    const detA = det2(A0, A1);
+
+    // Replacing the first column with C isolates x.
+    const detX = det2(C, A1);
+
+    // Replacing the second column with C isolates y.
+    const detY = det2(A0, C);
+
+    const x = detX / detA;
+    const y = detY / detA;
+
+    return { detA, detX, detY, x, y };
+}
+
+function decomposeTarget(A0, A1, C) {
+    // Once Cramer's rule gives x and y, the target vector can be rebuilt as:
+    // C = x*A0 + y*A1.
+    const sol = solveCramer2(A0, A1, C);
+    const xA0 = scale2(A0, sol.x);
+    const yA1 = scale2(A1, sol.y);
+    const rebuiltC = add2(xA0, yA1);
+
+    return { ...sol, xA0, yA1, rebuiltC };
+}
+
+function cramerXFilter(A0, A1, C) {
+    // Substitute C = x*A0 + y*A1 into det(C, A1).
+    // The y*A1 part disappears because det(A1, A1) is zero.
+    const d = decomposeTarget(A0, A1, C);
+
+    const replacementArea = det2(C, A1);
+    const survivingArea = det2(d.xA0, A1);
+    const disappearingArea = det2(d.yA1, A1);
+
+    return { ...d, replacementArea, survivingArea, disappearingArea };
+}
+
+function cramerYFilter(A0, A1, C) {
+    // Substitute C = x*A0 + y*A1 into det(A0, C).
+    // The x*A0 part disappears because det(A0, A0) is zero.
+    const d = decomposeTarget(A0, A1, C);
+
+    const replacementArea = det2(A0, C);
+    const disappearingArea = det2(A0, d.xA0);
+    const survivingArea = det2(A0, d.yA1);
+
+    return { ...d, replacementArea, survivingArea, disappearingArea };
+}
+
+function parallelogramCorners(U, V) {
+    // The determinant det(U, V) is the signed area of this parallelogram.
+    return [
+        vec2(0, 0),
+        U,
+        add2(U, V),
+        V
+    ];
+}
+
+// ============================================================================
+// DOCUMENTATION / REFLECTION SYSTEM
+// ============================================================================
+
+const explanations = [];
+
+function explainFunction(fn, title, introHtml, mathHtml) {
+    explanations.push({ fn, title, introHtml, mathHtml });
+}
+
+function escapeHtml(s) {
+    return s
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+}
+
+async function renderExplanations() {
+    const root = document.getElementById('explanations');
+    root.innerHTML = '';
+
+    for (const item of explanations) {
+        const section = document.createElement('section');
+        section.className = 'card';
+        section.innerHTML = `
+            <h2>${item.title}</h2>
+            <div class="cardIntro">${item.introHtml}</div>
+            <div class="docGrid">
+                <pre><code>${escapeHtml(item.fn.toString())}</code></pre>
+                <div class="mathText">${item.mathHtml}</div>
+            </div>
+        `;
+        root.appendChild(section);
+    }
+
+    waitForMathJaxAndTypeset(root);
+}
+
+function waitForMathJaxAndTypeset(root) {
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([root]);
+    } else {
+        setTimeout(() => waitForMathJaxAndTypeset(root), 50);
+    }
+}
+
+explainFunction(
+    det2,
+    'det2(a, b): determinant as signed area',
+    String.raw`<p>This is the tiny function that all of Cramer's rule rests on in 2D.</p>`,
+    String.raw`
+    <p>The determinant measures the signed area of the parallelogram made from two vectors:</p>
+
+    \[
+    \det(a,b) =
+    \begin{vmatrix}
+    a_x & b_x \\
+    a_y & b_y
+    \end{vmatrix}
+    = a_xb_y - a_yb_x
+    \]
+
+    <p>If the two vectors become parallel, the parallelogram collapses and the determinant becomes zero:</p>
+
+    \[
+    \det(a,a) = 0
+    \]
+
+    <div class="tip">
+        This zero-area fact is the trapdoor that makes Cramer's rule work.
+    </div>
+    `
+);
+
+explainFunction(
+    solveCramer2,
+    'solveCramer2(A0, A1, C): the replacement determinant formula',
+    String.raw`<p>This solves \(C = xA_0 + yA_1\) by replacing one basis vector at a time with the target vector.</p>`,
+    String.raw`
+    <p>Write the unknown coordinate problem as:</p>
+
+    \[
+    C = xA_0 + yA_1
+    \]
+
+    <p>or as a matrix with basis vectors as columns:</p>
+
+    \[
+    \begin{bmatrix} A_0 & A_1 \end{bmatrix}
+    \begin{bmatrix} x \\ y \end{bmatrix}
+    = C
+    \]
+
+    <p>Cramer's rule says:</p>
+
+    \[
+    x = \frac{\det(C, A_1)}{\det(A_0, A_1)}
+    \]
+
+    \[
+    y = \frac{\det(A_0, C)}{\det(A_0, A_1)}
+    \]
+
+    <p>The denominator is the signed area of one full coordinate cell made by \(A_0\) and \(A_1\).</p>
+    `
+);
+
+explainFunction(
+    decomposeTarget,
+    'decomposeTarget(A0, A1, C): rebuilding the target vector',
+    String.raw`<p>This function makes the hidden coordinate decomposition visible: \(C\) is rebuilt as \(xA_0 + yA_1\).</p>`,
+    String.raw`
+    <p>Once the coordinates are known, the target is no longer mysterious:</p>
+
+    \[
+    C = xA_0 + yA_1
+    \]
+
+    <p>In the 3D scene, this is drawn as a broken path:</p>
+
+    \[
+    0 \rightarrow xA_0 \rightarrow xA_0 + yA_1 = C
+    \]
+
+    <p class="small">Drag \(C\), \(A_0\), or \(A_1\) and watch the decomposition path update.</p>
+    `
+);
+
+explainFunction(
+    cramerXFilter,
+    'cramerXFilter(A0, A1, C): why det(C, A1) isolates x',
+    String.raw`<p>This is the main microscope view: Cramer's rule works because the determinant filters out the component parallel to the vector in the other slot.</p>`,
+    String.raw`
+    <p>Start with the replacement determinant for \(x\):</p>
+
+    \[
+    \det(C, A_1)
+    \]
+
+    <p>Now substitute \(C = xA_0 + yA_1\):</p>
+
+    \[
+    \det(C, A_1)
+    = \det(xA_0 + yA_1, A_1)
+    \]
+
+    <p>Use linearity of the determinant in the first slot:</p>
+
+    \[
+    \det(xA_0 + yA_1, A_1)
+    = x\det(A_0,A_1) + y\det(A_1,A_1)
+    \]
+
+    <p>The second term vanishes:</p>
+
+    \[
+    \det(A_1,A_1)=0
+    \]
+
+    <p>So:</p>
+
+    \[
+    \det(C,A_1) = x\det(A_0,A_1)
+    \]
+
+    <p>Divide by the basis area:</p>
+
+    \[
+    x = \frac{\det(C,A_1)}{\det(A_0,A_1)}
+    \]
+
+    <div class="tip">
+        Pairing with \(A_1\) kills the \(A_1\)-component of \(C\). Only the \(A_0\)-component survives.
+    </div>
+    `
+);
+
+explainFunction(
+    cramerYFilter,
+    'cramerYFilter(A0, A1, C): why det(A0, C) isolates y',
+    String.raw`<p>The y coordinate works the same way, but now the component parallel to \(A_0\) disappears.</p>`,
+    String.raw`
+    <p>Start with the replacement determinant for \(y\):</p>
+
+    \[
+    \det(A_0, C)
+    \]
+
+    <p>Substitute \(C = xA_0 + yA_1\):</p>
+
+    \[
+    \det(A_0, C)
+    = \det(A_0, xA_0 + yA_1)
+    \]
+
+    <p>Use linearity in the second slot:</p>
+
+    \[
+    \det(A_0, xA_0 + yA_1)
+    = x\det(A_0,A_0) + y\det(A_0,A_1)
+    \]
+
+    <p>The first term vanishes:</p>
+
+    \[
+    \det(A_0,A_0)=0
+    \]
+
+    <p>So:</p>
+
+    \[
+    \det(A_0,C) = y\det(A_0,A_1)
+    \]
+
+    <p>Divide by the basis area:</p>
+
+    \[
+    y = \frac{\det(A_0,C)}{\det(A_0,A_1)}
+    \]
+
+    <div class="tip">
+        Pairing with \(A_0\) kills the \(A_0\)-component of \(C\). Only the \(A_1\)-component survives.
+    </div>
+    `
+);
+
+explainFunction(
+    parallelogramCorners,
+    'parallelogramCorners(U, V): the shape whose area is det(U, V)',
+    String.raw`<p>The slabs in the 3D scene are just lifted versions of this parallelogram.</p>`,
+    String.raw`
+    <p>The determinant \(\det(U,V)\) is attached to this four-corner shape:</p>
+
+    \[
+    0,\quad U,\quad U+V,\quad V
+    \]
+
+    <p>The page draws that parallelogram on the ground plane. Then it lifts it upward for a positive determinant and downward for a negative determinant.</p>
+
+    <p class="small">The lift is a visual sign cue. The actual determinant value is shown numerically in the HUD.</p>
+    `
+);
+
+// ============================================================================
+// THREE.JS VISUALIZATION PLUMBING
+// ============================================================================
+
+const Colors = {
+    a0: 0x4f8dff,
+    a1: 0xffad42,
+    c: 0xff5ee7,
+    x: 0x56e39f,
+    y: 0xb785ff,
+    base: 0x39d0ff,
+    replacement: 0xffe56b,
+    zero: 0xffffff,
+    warning: 0xffcf6e,
+    grid: 0x3a4255
+};
+
+const State = {
+    A0: vec2(2.4, 0.55),
+    A1: vec2(0.65, 2.15),
+    C: vec2(2.65, 2.25),
+    mode: 'free'
+};
+
+const modes = [
+    { id: 'free', label: 'Free Drag' },
+    { id: 'solve', label: 'Solve C = xA0 + yA1' },
+    { id: 'x', label: 'X Cramer View' },
+    { id: 'y', label: 'Y Cramer View' },
+    { id: 'degenerate', label: 'Degenerate Case' }
+];
+
+const viewport = document.getElementById('viewport');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x0b0e14, 1);
+viewport.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0b0e14, 16, 36);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+camera.position.set(6.5, 7.2, 8.0);
+camera.lookAt(0, 0, 0);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0x293044, 1.3);
+scene.add(hemi);
+
+const dir = new THREE.DirectionalLight(0xffffff, 1.1);
+dir.position.set(4, 7, 5);
+scene.add(dir);
+
+const grid = new THREE.GridHelper(16, 32, Colors.grid, Colors.grid);
+grid.material.opacity = 0.38;
+grid.material.transparent = true;
+scene.add(grid);
+
+const axes = new THREE.AxesHelper(2.2);
+axes.position.y = 0.015;
+scene.add(axes);
+
+const dynamicRoot = new THREE.Group();
+scene.add(dynamicRoot);
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+let dragName = null;
+let dragHandles = [];
+
+function toV3(v, y = 0) {
+    return new THREE.Vector3(v.x, y, v.y);
+}
+
+function fromV3(p) {
+    return vec2(p.x, p.z);
+}
+
+function v2Len(v) {
+    return Math.hypot(v.x, v.y);
+}
+
+function finiteSolution(sol) {
+    return Number.isFinite(sol.x) && Number.isFinite(sol.y) && Math.abs(sol.detA) > 1e-8;
+}
+
+function clearGroup(group) {
+    while (group.children.length) {
+        const child = group.children.pop();
+        child.traverse?.((obj) => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+                if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+                else obj.material.dispose();
+            }
+        });
+    }
+}
+
+function makeMat(color, opacity = 1, side = THREE.DoubleSide) {
+    return new THREE.MeshStandardMaterial({
+        color,
+        transparent: opacity < 1,
+        opacity,
+        side,
+        roughness: 0.72,
+        metalness: 0.02
+    });
+}
+
+function addArrow(group, start, vec, color, label, labelOffsetY = 0.2) {
+    const length = v2Len(vec);
+    if (length < 1e-5) return null;
+
+    const start3 = toV3(start, 0.055);
+    const dir3 = toV3(vec).normalize();
+    const arrow = new THREE.ArrowHelper(dir3, start3, length, color, 0.22, 0.12);
+    group.add(arrow);
+
+    if (label) {
+        const end = add2(start, vec);
+        const sprite = makeTextSprite(label, color);
+        sprite.position.copy(toV3(end, labelOffsetY));
+        group.add(sprite);
+    }
+
+    return arrow;
+}
+
+function addLine(group, points2, color, dashed = false) {
+    const points3 = points2.map((p) => toV3(p, 0.075));
+    const geo = new THREE.BufferGeometry().setFromPoints(points3);
+    const mat = dashed
+        ? new THREE.LineDashedMaterial({ color, dashSize: 0.16, gapSize: 0.09 })
+        : new THREE.LineBasicMaterial({ color });
+    const line = new THREE.Line(geo, mat);
+    if (dashed) line.computeLineDistances();
+    group.add(line);
+    return line;
+}
+
+function makeTextSprite(text, color = 0xffffff) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const lines = String(text).split('\n');
+    const pad = 14;
+    const fontSize = 34;
+    const lineHeight = 40;
+
+    ctx.font = `700 ${fontSize}px system-ui, sans-serif`;
+    const maxWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
+    canvas.width = Math.ceil(maxWidth + pad * 2);
+    canvas.height = Math.ceil(lines.length * lineHeight + pad * 2);
+
+    ctx.font = `700 ${fontSize}px system-ui, sans-serif`;
+    ctx.fillStyle = 'rgba(7, 10, 16, 0.72)';
+    roundRect(ctx, 0, 0, canvas.width, canvas.height, 12);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.stroke();
+    ctx.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+    lines.forEach((line, i) => ctx.fillText(line, pad, pad + fontSize + i * lineHeight));
+
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+    const sprite = new THREE.Sprite(mat);
+    sprite.scale.set(canvas.width / 170, canvas.height / 170, 1);
+    sprite.renderOrder = 20;
+    return sprite;
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+function addHandle(group, name, position2, color) {
+    const geo = new THREE.SphereGeometry(0.13, 24, 16);
+    const mat = makeMat(color, 1);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(toV3(position2, 0.14));
+    mesh.userData.dragName = name;
+    group.add(mesh);
+    dragHandles.push(mesh);
+    return mesh;
+}
+
+function determinantHeight(det) {
+    if (Math.abs(det) < 1e-8) return 0;
+    const mag = THREE.MathUtils.clamp(Math.abs(det) * 0.075, 0.08, 0.55);
+    return Math.sign(det) * mag;
+}
+
+function addSlab(group, U, V, color, label, opacity = 0.36) {
+    const det = det2(U, V);
+    const h = determinantHeight(det);
+    const corners = parallelogramCorners(U, V);
+
+    const bottom = corners.map((p) => toV3(p, 0));
+    const top = corners.map((p) => toV3(p, h));
+    const positions = [];
+    for (const p of bottom.concat(top)) positions.push(p.x, p.y, p.z);
+
+    const indices = [
+        0, 1, 2, 0, 2, 3,      // bottom
+        4, 6, 5, 4, 7, 6,      // top
+        0, 4, 5, 0, 5, 1,      // side
+        1, 5, 6, 1, 6, 2,
+        2, 6, 7, 2, 7, 3,
+        3, 7, 4, 3, 4, 0
+    ];
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+
+    const mesh = new THREE.Mesh(geo, makeMat(color, opacity));
+    group.add(mesh);
+
+    // Ground outline: shows the actual parallelogram even when det is zero.
+    const outlinePts = [corners[0], corners[1], corners[2], corners[3], corners[0]];
+    addLine(group, outlinePts, color, Math.abs(det) < 1e-8);
+
+    // Top outline: reinforces positive/up vs negative/down.
+    if (Math.abs(h) > 1e-8) {
+        const topPts = outlinePts.map((p) => toV3(p, h));
+        const geoTop = new THREE.BufferGeometry().setFromPoints(topPts);
+        const lineTop = new THREE.Line(geoTop, new THREE.LineBasicMaterial({ color }));
+        group.add(lineTop);
+    }
+
+    const labelPos = scale2(add2(U, V), 0.5);
+    const sprite = makeTextSprite(`${label}\ndet=${format(det)}`, color);
+    sprite.position.copy(toV3(labelPos, h + Math.sign(h || 1) * 0.35));
+    group.add(sprite);
+}
+
+function addSlabStation(parent, position, U, V, color, label) {
+    const station = new THREE.Group();
+    station.position.set(position.x, position.y, position.z);
+    parent.add(station);
+    addSlab(station, U, V, color, label);
+    return station;
+}
+
+function drawMainVectors(group) {
+    addArrow(group, vec2(0, 0), State.A0, Colors.a0, 'A0');
+    addArrow(group, vec2(0, 0), State.A1, Colors.a1, 'A1');
+    addArrow(group, vec2(0, 0), State.C, Colors.c, 'C');
+
+    addHandle(group, 'A0', State.A0, Colors.a0);
+    addHandle(group, 'A1', State.A1, Colors.a1);
+    addHandle(group, 'C', State.C, Colors.c);
+}
+
+function drawDecomposition(group) {
+    const d = decomposeTarget(State.A0, State.A1, State.C);
+    if (!finiteSolution(d)) return;
+
+    addArrow(group, vec2(0, 0), d.xA0, Colors.x, 'xA0', 0.36);
+    addArrow(group, d.xA0, d.yA1, Colors.y, 'yA1', 0.36);
+    addLine(group, [vec2(0, 0), d.yA1, add2(d.yA1, d.xA0)], Colors.y, true);
+    addLine(group, [d.yA1, State.C], Colors.x, true);
+
+    const rebuilt = makeTextSprite('xA0 + yA1 = C', 0xffffff);
+    rebuilt.position.copy(toV3(State.C, 0.58));
+    group.add(rebuilt);
+}
+
+function drawFreeMode(group) {
+    drawMainVectors(group);
+    addSlabStation(group, { x: -5.3, y: 0, z: -4.5 }, State.A0, State.A1, Colors.base, 'basis det(A0,A1)');
+    addSlabStation(group, { x: 0, y: 0, z: -4.5 }, State.C, State.A1, Colors.replacement, 'x replace det(C,A1)');
+    addSlabStation(group, { x: 5.3, y: 0, z: -4.5 }, State.A0, State.C, Colors.replacement, 'y replace det(A0,C)');
+}
+
+function drawSolveMode(group) {
+    drawMainVectors(group);
+    drawDecomposition(group);
+    addSlabStation(group, { x: -3.0, y: 0, z: -4.8 }, State.A0, State.A1, Colors.base, 'basis area');
+    addSlabStation(group, { x: 3.0, y: 0, z: -4.8 }, State.C, State.A1, Colors.replacement, 'x replacement');
+}
+
+function drawXMode(group) {
+    drawMainVectors(group);
+    drawDecomposition(group);
+
+    const f = cramerXFilter(State.A0, State.A1, State.C);
+    if (!finiteSolution(f)) return;
+
+    addSlabStation(group, { x: -6.0, y: 0, z: -4.7 }, State.A0, State.A1, Colors.base, '1 basis area');
+    addSlabStation(group, { x: -1.8, y: 0, z: -4.7 }, State.C, State.A1, Colors.replacement, 'det(C,A1)');
+    addSlabStation(group, { x: 2.5, y: 0, z: -4.7 }, f.xA0, State.A1, Colors.x, 'survives det(xA0,A1)');
+    addSlabStation(group, { x: 5.9, y: 0, z: -1.9 }, f.yA1, State.A1, Colors.zero, 'dies det(yA1,A1)');
+}
+
+function drawYMode(group) {
+    drawMainVectors(group);
+    drawDecomposition(group);
+
+    const f = cramerYFilter(State.A0, State.A1, State.C);
+    if (!finiteSolution(f)) return;
+
+    addSlabStation(group, { x: -6.0, y: 0, z: -4.7 }, State.A0, State.A1, Colors.base, '1 basis area');
+    addSlabStation(group, { x: -1.8, y: 0, z: -4.7 }, State.A0, State.C, Colors.replacement, 'det(A0,C)');
+    addSlabStation(group, { x: 2.5, y: 0, z: -4.7 }, State.A0, f.yA1, Colors.y, 'survives det(A0,yA1)');
+    addSlabStation(group, { x: 5.9, y: 0, z: -1.9 }, State.A0, f.xA0, Colors.zero, 'dies det(A0,xA0)');
+}
+
+function drawDegenerateMode(group) {
+    drawMainVectors(group);
+    drawDecomposition(group);
+    addSlabStation(group, { x: -3.4, y: 0, z: -4.7 }, State.A0, State.A1, Colors.base, 'tiny denominator');
+    addSlabStation(group, { x: 3.0, y: 0, z: -4.7 }, State.C, State.A1, Colors.replacement, 'numerator');
+
+    const warning = makeTextSprite('When det(A0,A1) approaches 0, x and y explode.', Colors.warning);
+    warning.position.set(0, 1.6, -2.0);
+    group.add(warning);
+}
+
+function rebuildScene() {
+    clearGroup(dynamicRoot);
+    dragHandles = [];
+
+    if (State.mode === 'free') drawFreeMode(dynamicRoot);
+    else if (State.mode === 'solve') drawSolveMode(dynamicRoot);
+    else if (State.mode === 'x') drawXMode(dynamicRoot);
+    else if (State.mode === 'y') drawYMode(dynamicRoot);
+    else if (State.mode === 'degenerate') drawDegenerateMode(dynamicRoot);
+
+    updateLiveValues();
+}
+
+function format(n) {
+    if (!Number.isFinite(n)) return '∞';
+    if (Math.abs(n) < 1e-10) return '0.000';
+    return n.toFixed(3);
+}
+
+function updateLiveValues() {
+    const sol = solveCramer2(State.A0, State.A1, State.C);
+    const root = document.getElementById('liveValues');
+
+    const rows = [
+        ['A0', `(${format(State.A0.x)}, ${format(State.A0.y)})`],
+        ['A1', `(${format(State.A1.x)}, ${format(State.A1.y)})`],
+        ['C', `(${format(State.C.x)}, ${format(State.C.y)})`],
+        ['det(A0,A1)', format(sol.detA)],
+        ['det(C,A1)', format(sol.detX)],
+        ['det(A0,C)', format(sol.detY)],
+        ['x = det(C,A1)/det(A0,A1)', format(sol.x)],
+        ['y = det(A0,C)/det(A0,A1)', format(sol.y)]
+    ];
+
+    root.innerHTML = rows.map(([k, v]) => `<div class="key">${k}</div><div>${v}</div>`).join('');
+
+    if (Math.abs(sol.detA) < 0.12) {
+        root.innerHTML += `<div class="warn">Warning: denominator determinant is close to zero. The basis is nearly collapsed.</div>`;
+    }
+}
+
+function buildModeButtons() {
+    const row = document.getElementById('modeButtons');
+    row.innerHTML = '';
+    for (const mode of modes) {
+        const btn = document.createElement('button');
+        btn.textContent = mode.label;
+        btn.className = State.mode === mode.id ? 'active' : '';
+        btn.addEventListener('click', () => {
+            State.mode = mode.id;
+            buildModeButtons();
+            rebuildScene();
+        });
+        row.appendChild(btn);
+    }
+}
+
+function resetState() {
+    State.A0 = vec2(2.4, 0.55);
+    State.A1 = vec2(0.65, 2.15);
+    State.C = vec2(2.65, 2.25);
+    rebuildScene();
+}
+
+function setNearDegenerate() {
+    State.A0 = vec2(2.6, 0.7);
+    State.A1 = vec2(3.05, 0.86);
+    State.C = vec2(1.7, 2.35);
+    State.mode = 'degenerate';
+    buildModeButtons();
+    rebuildScene();
+}
+
+function resize() {
+    const rect = viewport.getBoundingClientRect();
+    renderer.setSize(rect.width, rect.height, false);
+    camera.aspect = rect.width / rect.height;
+    camera.updateProjectionMatrix();
+}
+
+function updateMouse(ev) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+function pickHandle(ev) {
+    updateMouse(ev);
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(dragHandles, false);
+    return hits.length ? hits[0].object.userData.dragName : null;
+}
+
+function groundPointFromMouse(ev) {
+    updateMouse(ev);
+    raycaster.setFromCamera(mouse, camera);
+    const p = new THREE.Vector3();
+    const hit = raycaster.ray.intersectPlane(dragPlane, p);
+    return hit ? fromV3(p) : null;
+}
+
+renderer.domElement.addEventListener('pointerdown', (ev) => {
+    const picked = pickHandle(ev);
+    if (!picked) return;
+
+    dragName = picked;
+    controls.enabled = false;
+    renderer.domElement.setPointerCapture(ev.pointerId);
+});
+
+renderer.domElement.addEventListener('pointermove', (ev) => {
+    if (!dragName) return;
+
+    const p = groundPointFromMouse(ev);
+    if (!p) return;
+
+    // Clamp dragging to keep the teaching view readable.
+    p.x = THREE.MathUtils.clamp(p.x, -3.7, 3.7);
+    p.y = THREE.MathUtils.clamp(p.y, -3.7, 3.7);
+
+    State[dragName] = p;
+    rebuildScene();
+});
+
+renderer.domElement.addEventListener('pointerup', (ev) => {
+    dragName = null;
+    controls.enabled = true;
+    try { renderer.domElement.releasePointerCapture(ev.pointerId); } catch {}
+});
+
+renderer.domElement.addEventListener('pointercancel', () => {
+    dragName = null;
+    controls.enabled = true;
+});
+
+window.addEventListener('resize', () => {
+    resize();
+});
+
+function animate() {
+    controls.update();
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+}
+
+document.getElementById('resetBtn').addEventListener('click', resetState);
+document.getElementById('degenerateBtn').addEventListener('click', setNearDegenerate);
+
+buildModeButtons();
+resize();
+rebuildScene();
+renderExplanations();
+animate();
+</script>
+</body>
+</html>
