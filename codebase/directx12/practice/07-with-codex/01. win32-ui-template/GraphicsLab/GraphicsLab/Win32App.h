@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <chrono>
+#include <string>
 
 #include "D3D12Renderer.h"
 #include "Experiment.h"
@@ -37,6 +38,8 @@ private:
     HWND m_reset = nullptr;
     HWND m_description = nullptr;
     HFONT m_font = nullptr;
+    HBRUSH m_uiBrush = nullptr;
+    std::wstring m_statusText;
 
     ExperimentParams m_params;
     D3D12Renderer m_renderer;

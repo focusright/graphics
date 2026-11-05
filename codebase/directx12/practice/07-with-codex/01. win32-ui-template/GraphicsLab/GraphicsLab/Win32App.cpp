@@ -2,15 +2,30 @@
 #include "Errors.h"
 
 #include <commctrl.h>
+#include <dwmapi.h>
+#include <uxtheme.h>
 #include <algorithm>
 #include <format>
 #include <initializer_list>
+#include <cwctype>
 
 using Clock = std::chrono::steady_clock;
+
+#pragma comment(lib, "dwmapi.lib")
+#pragma comment(lib, "uxtheme.lib")
 
 namespace {
 constexpr wchar_t mainClass[] = L"GraphicsLabMainWindow";
 constexpr wchar_t viewportClass[] = L"GraphicsLabViewport";
+constexpr COLORREF uiBackground = RGB(32, 34, 38);
+constexpr COLORREF uiSurface = RGB(47, 50, 56);
+constexpr COLORREF uiText = RGB(220, 223, 228);
+constexpr COLORREF uiAccent = RGB(95, 165, 220);
+
+void FillColor(HDC dc, const RECT& rect, COLORREF color) {
+    SetDCBrushColor(dc, color);
+    FillRect(dc, &rect, static_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+}
 
 enum : UINT {
     menuExit = 100,
@@ -57,6 +72,9 @@ Win32App::~Win32App() {
     }
     if (m_font) {
         DeleteObject(m_font);
+    }
+    if (m_uiBrush) {
+        DeleteObject(m_uiBrush);
     }
 }
 
@@ -124,13 +142,19 @@ void Win32App::CreateControls() {
     m_slider = MakeControl(TBS_HORZ | TBS_AUTOTICKS, TRACKBAR_CLASSW, L"", m_window, sliderSpeed);
     m_animate = MakeControl(BS_AUTOCHECKBOX | WS_TABSTOP, L"BUTTON", L"Animate", m_window, checkAnimate);
     m_colorText = MakeControl(SS_LEFT, L"STATIC", L"Background color", m_window);
-    m_colorSelect = MakeControl(CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
+    m_colorSelect = MakeControl(CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP,
         L"COMBOBOX", L"", m_window, comboColor);
     m_reset = MakeControl(BS_PUSHBUTTON | WS_TABSTOP, L"BUTTON", L"Reset", m_window, buttonReset);
     m_description = MakeControl(SS_LEFT, L"STATIC",
         L"Native Win32 controls + Direct3D 12.\r\n"
         L"Shaders are built into the executable.\r\n"
         L"No third-party UI or runtime installer.", m_window);
+
+    // Use documented painting hooks rather than undocumented dark-mode APIs.
+    for (HWND control : {m_slider, m_colorSelect, m_status}) {
+        SetWindowTheme(control, L"", L"");
+    }
+    SendMessageW(m_status, SB_SETBKCOLOR, 0, uiBackground);
 
     SendMessageW(m_slider, TBM_SETRANGE, TRUE, MAKELPARAM(0, 400));
     SendMessageW(m_slider, TBM_SETTICFREQ, 100, 0);
@@ -153,9 +177,9 @@ void Win32App::SyncControls() {
 
 void Win32App::UpdateStatus() {
     const wchar_t* backend = m_renderer.UsingWarp() ? L"WARP (software)" : L"GPU";
-    const auto text = std::format(L"D3D12 ({})  |  {}  |  {:.2f} rad/s",
+    m_statusText = std::format(L"D3D12 ({})  |  {}  |  {:.2f} rad/s",
         backend, m_params.animate ? L"Animating" : L"Paused", m_params.rotationSpeed);
-    SendMessageW(m_status, SB_SETTEXTW, 0, reinterpret_cast<LPARAM>(text.c_str()));
+    SendMessageW(m_status, SB_SETTEXTW, SBT_OWNERDRAW | SBT_NOBORDERS, 0);
 }
 
 void Win32App::Layout() {
@@ -192,6 +216,139 @@ void Win32App::Layout() {
 LRESULT Win32App::HandleMessage(HWND window, UINT message,
     WPARAM wparam, LPARAM lparam) {
     switch (message) {
+    case WM_MENUCHAR: {
+        const auto menu = reinterpret_cast<HMENU>(lparam);
+        for (int index = 0; index < GetMenuItemCount(menu); ++index) {
+            MENUITEMINFOW item{sizeof(MENUITEMINFOW)};
+            item.fMask = MIIM_DATA;
+            if (GetMenuItemInfoW(menu, index, TRUE, &item) && item.dwItemData) {
+                const auto* marker = wcschr(reinterpret_cast<const wchar_t*>(item.dwItemData), L'&');
+                if (marker && marker[1] && std::towupper(marker[1]) == std::towupper(static_cast<wchar_t>(LOWORD(wparam)))) {
+                    return MAKELRESULT(index, MNC_EXECUTE);
+                }
+            }
+        }
+        return MAKELRESULT(0, MNC_IGNORE);
+    }
+
+    case WM_CTLCOLORSTATIC:
+    case WM_CTLCOLORBTN:
+    case WM_CTLCOLOREDIT:
+    case WM_CTLCOLORLISTBOX: {
+        const auto dc = reinterpret_cast<HDC>(wparam);
+        SetTextColor(dc, uiText);
+        SetBkColor(dc, uiBackground);
+        return reinterpret_cast<LRESULT>(m_uiBrush);
+    }
+
+    case WM_MEASUREITEM: {
+        auto* item = reinterpret_cast<MEASUREITEMSTRUCT*>(lparam);
+        if (item->CtlType == ODT_MENU) {
+            HDC dc = GetDC(window);
+            const auto oldFont = SelectObject(dc, m_font ? m_font : GetStockObject(DEFAULT_GUI_FONT));
+            SIZE size{};
+            const auto* label = reinterpret_cast<const wchar_t*>(item->itemData);
+            GetTextExtentPoint32W(dc, label, lstrlenW(label), &size);
+            item->itemWidth = size.cx + DpiScale(24);
+            item->itemHeight = std::max(static_cast<int>(size.cy) + DpiScale(6), DpiScale(22));
+            SelectObject(dc, oldFont);
+            ReleaseDC(window, dc);
+            return TRUE;
+        }
+        if (item->CtlID == comboColor) {
+            item->itemHeight = DpiScale(22);
+            return TRUE;
+        }
+        break;
+    }
+
+    case WM_DRAWITEM: {
+        const auto* item = reinterpret_cast<const DRAWITEMSTRUCT*>(lparam);
+        if (item->CtlType == ODT_MENU) {
+            const int saved = SaveDC(item->hDC);
+            FillColor(item->hDC, item->rcItem, (item->itemState & ODS_SELECTED) ? uiSurface : uiBackground);
+            SetTextColor(item->hDC, uiText);
+            SetBkMode(item->hDC, TRANSPARENT);
+            SelectObject(item->hDC, m_font ? m_font : GetStockObject(DEFAULT_GUI_FONT));
+            RECT rect = item->rcItem;
+            rect.left += DpiScale(8);
+            DrawTextW(item->hDC, reinterpret_cast<const wchar_t*>(item->itemData), -1, &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+            RestoreDC(item->hDC, saved);
+            return TRUE;
+        }
+        if (item->hwndItem == m_colorSelect || item->hwndItem == m_status) {
+            const int saved = SaveDC(item->hDC);
+            FillColor(item->hDC, item->rcItem, (item->itemState & ODS_SELECTED) ? uiSurface : uiBackground);
+            SetTextColor(item->hDC, uiText);
+            SetBkMode(item->hDC, TRANSPARENT);
+            if (m_font) {
+                SelectObject(item->hDC, m_font);
+            }
+            wchar_t label[64]{};
+            const wchar_t* text = m_statusText.c_str();
+            if (item->hwndItem == m_colorSelect) {
+                if (item->itemID != static_cast<UINT>(-1)) {
+                    SendMessageW(m_colorSelect, CB_GETLBTEXT, item->itemID, reinterpret_cast<LPARAM>(label));
+                }
+                text = label;
+            }
+            RECT rect = item->rcItem;
+            rect.left += DpiScale(5);
+            DrawTextW(item->hDC, text, -1, &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+            if (item->itemState & ODS_FOCUS) {
+                DrawFocusRect(item->hDC, &item->rcItem);
+            }
+            RestoreDC(item->hDC, saved);
+            return TRUE;
+        }
+        break;
+    }
+
+    case WM_NOTIFY: {
+        auto* draw = reinterpret_cast<NMCUSTOMDRAW*>(lparam);
+        if (draw->hdr.code != NM_CUSTOMDRAW) {
+            break;
+        }
+        if (draw->hdr.hwndFrom == m_slider) {
+            if (draw->dwDrawStage == CDDS_PREPAINT) {
+                return CDRF_NOTIFYITEMDRAW;
+            }
+            if (draw->dwDrawStage == CDDS_ITEMPREPAINT) {
+                if (draw->dwItemSpec == TBCD_CHANNEL || draw->dwItemSpec == TBCD_THUMB) {
+                    FillColor(draw->hdc, draw->rc, draw->dwItemSpec == TBCD_THUMB ? uiAccent : uiSurface);
+                }
+                return CDRF_SKIPDEFAULT;
+            }
+        } else if ((draw->hdr.hwndFrom == m_reset || draw->hdr.hwndFrom == m_animate) && draw->dwDrawStage == CDDS_PREPAINT) {
+            const int saved = SaveDC(draw->hdc);
+            RECT rect = draw->rc;
+            FillColor(draw->hdc, rect, draw->hdr.hwndFrom == m_reset ? uiSurface : uiBackground);
+            if (draw->hdr.hwndFrom == m_animate) {
+                RECT box{rect.left, rect.top + (rect.bottom - rect.top - DpiScale(14)) / 2, rect.left + DpiScale(14), 0};
+                box.bottom = box.top + DpiScale(14);
+                FillColor(draw->hdc, box, uiSurface);
+                if (SendMessageW(m_animate, BM_GETCHECK, 0, 0) == BST_CHECKED) {
+                    InflateRect(&box, -DpiScale(3), -DpiScale(3));
+                    FillColor(draw->hdc, box, uiAccent);
+                }
+                rect.left += DpiScale(20);
+            }
+            wchar_t label[64]{};
+            GetWindowTextW(draw->hdr.hwndFrom, label, static_cast<int>(std::size(label)));
+            SetTextColor(draw->hdc, uiText);
+            SetBkMode(draw->hdc, TRANSPARENT);
+            SelectObject(draw->hdc, m_font);
+            DrawTextW(draw->hdc, label, -1, &rect, DT_VCENTER | DT_SINGLELINE | (draw->hdr.hwndFrom == m_reset ? DT_CENTER : DT_LEFT));
+            if (draw->uItemState & CDIS_FOCUS) {
+                InflateRect(&rect, -2, -2);
+                DrawFocusRect(draw->hdc, &rect);
+            }
+            RestoreDC(draw->hdc, saved);
+            return CDRF_SKIPDEFAULT;
+        }
+        break;
+    }
+
     case WM_SIZE:
         Layout();
         return 0;
@@ -271,13 +428,15 @@ LRESULT Win32App::HandleMessage(HWND window, UINT message,
 
 int Win32App::Run(HINSTANCE instance, int showCommand) {
     m_instance = instance;
+    m_uiBrush = CreateSolidBrush(uiBackground);
+    Require(m_uiBrush != nullptr, "CreateSolidBrush (UI background)");
 
     WNDCLASSEXW mainWindowClass{sizeof(WNDCLASSEXW)};
     mainWindowClass.style = CS_HREDRAW | CS_VREDRAW;
     mainWindowClass.lpfnWndProc = WindowProc;
     mainWindowClass.hInstance = instance;
     mainWindowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-    mainWindowClass.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+    mainWindowClass.hbrBackground = m_uiBrush;
     mainWindowClass.lpszClassName = mainClass;
     Require(RegisterClassExW(&mainWindowClass) != 0, "RegisterClassExW (main window)");
 
@@ -293,10 +452,25 @@ int Win32App::Run(HINSTANCE instance, int showCommand) {
     HMENU fileMenu = CreatePopupMenu();
     HMENU helpMenu = CreatePopupMenu();
     Require(menu && fileMenu && helpMenu, "CreateMenu");
-    AppendMenuW(fileMenu, MF_STRING, menuExit, L"E&xit");
-    AppendMenuW(helpMenu, MF_STRING, menuAbout, L"&About");
-    AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(fileMenu), L"&File");
-    AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(helpMenu), L"&Help");
+    AppendMenuW(fileMenu, MF_OWNERDRAW, menuExit, L"E&xit");
+    AppendMenuW(helpMenu, MF_OWNERDRAW, menuAbout, L"&About");
+    AppendMenuW(menu, MF_POPUP | MF_OWNERDRAW, reinterpret_cast<UINT_PTR>(fileMenu), L"&File");
+    AppendMenuW(menu, MF_POPUP | MF_OWNERDRAW, reinterpret_cast<UINT_PTR>(helpMenu), L"&Help");
+    MENUINFO menuInfo{sizeof(MENUINFO)};
+    menuInfo.fMask = MIM_BACKGROUND | MIM_APPLYTOSUBMENUS;
+    menuInfo.hbrBack = m_uiBrush;
+    SetMenuInfo(menu, &menuInfo);
+    // Keep menu labels available to accessibility clients for owner-drawn items.
+    auto setMenuLabel = [](HMENU target, UINT position, const wchar_t* label) {
+        MENUITEMINFOW item{sizeof(MENUITEMINFOW)};
+        item.fMask = MIIM_STRING;
+        item.dwTypeData = const_cast<wchar_t*>(label);
+        SetMenuItemInfoW(target, position, TRUE, &item);
+    };
+    setMenuLabel(menu, 0, L"&File");
+    setMenuLabel(menu, 1, L"&Help");
+    setMenuLabel(fileMenu, 0, L"E&xit");
+    setMenuLabel(helpMenu, 0, L"&About");
 
     m_window = CreateWindowExW(0, mainClass, L"GraphicsLab - D3D12 Experiment",
         WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT,
@@ -306,6 +480,9 @@ int Win32App::Run(HINSTANCE instance, int showCommand) {
         Require(false, "CreateWindowExW (main window)");
     }
 
+    const BOOL darkTitleBar = TRUE;
+    // Older Windows versions may reject this optional appearance attribute.
+    DwmSetWindowAttribute(m_window, DWMWA_USE_IMMERSIVE_DARK_MODE, &darkTitleBar, sizeof(darkTitleBar));
     CreateControls();
     m_renderer.Initialize(m_viewport);
     m_experiment.Initialize(m_renderer.Device());

@@ -26,6 +26,8 @@ The Release build uses **`/MT`**. Only the **`.exe`** is intended for distributi
 
 ## UI
 
+The native UI uses a charcoal background, light text, and blue accents. Menus and controls use documented Win32 painting hooks; the optional dark title bar is requested through DWM. The UI palette is independent of the viewport's background-color selection.
+
 - **Rotation speed:** 0.00–4.00 radians per second
 - **Animate:** pause/resume without losing the current angle
 - **Background color:** five clear colors
@@ -57,7 +59,7 @@ Keep the host simple rather than growing an editor framework. The experiment its
 
 ## Release validation checklist
 
-Debug and Release x64 were built with Visual Studio 2026 / MSVC v145 on 2026-11-05. The application rendered on the hardware GPU; pause, rotation speed, background selection, reset, and maximized viewport rendering were exercised. Release imports were inspected with `dumpbin /dependents` and `/imports`: only `d3d12.dll`, `dxgi.dll`, `COMCTL32.dll`, `USER32.dll`, `GDI32.dll`, and `KERNEL32.dll` were listed. The Release executable was 421,376 bytes. This does not establish compatibility with clean Windows 10/11 installations or validate the WARP path. GPU debug messages were not captured.
+Debug and Release x64 were built with Visual Studio 2026 / MSVC v145 on 2026-11-05. The application rendered on the hardware GPU; pause, rotation speed, background selection, reset, and maximized viewport rendering were exercised. The subsequent dark UI build also passed both configurations and was visually inspected. Release imports include only Windows DLLs: `d3d12.dll`, `dxgi.dll`, `COMCTL32.dll`, `USER32.dll`, `GDI32.dll`, `KERNEL32.dll`, `dwmapi.dll`, and `UxTheme.dll`. The dark UI Release executable was 425,472 bytes. This does not establish compatibility with clean Windows 10/11 installations or validate the WARP path. GPU debug messages were not captured.
 
 On a Windows machine with Visual Studio 2026:
 
