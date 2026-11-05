@@ -1,8 +1,6 @@
 <Solution>
   <Configurations>
-    <BuildType Name="Debug" />
-    <BuildType Name="Release" />
     <Platform Name="x64" />
   </Configurations>
-  <Project Path="GraphicsLab\GraphicsLab.vcxproj" />
+  <Project Path="GraphicsLab\GraphicsLab.vcxproj" Id="6f0db23e-8f1c-4e03-b544-b6d589f2090f" />
 </Solution>
